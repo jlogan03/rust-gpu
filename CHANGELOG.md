@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed 🛠
 
 - [PR#637](https://github.com/Rust-GPU/rust-gpu/pull/637) upgraded `bitflags` dependency from 1.x to 2.x
+- [ ]() update default floating-point behavior to more closely match Rust's and add `fast-math` annotation
 
 #### Rust-like floating-point defaults
 
