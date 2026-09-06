@@ -1,0 +1,54 @@
+               OpCapability Shader
+               OpCapability Geometry
+               OpCapability FloatControls2
+               OpCapability DenormPreserve
+               OpCapability RoundingModeRTE
+               OpExtension "SPV_KHR_float_controls2"
+               OpExtension "SPV_KHR_float_controls"
+               OpMemoryModel Logical Simple
+               OpEntryPoint Geometry %1 "main" %position_in %attr1_in %attr2_in %attr1_out %attr2_out %position_out
+               OpExecutionMode %1 InputPoints
+               OpExecutionMode %1 OutputLineStrip
+               OpExecutionModeId %1 FPFastMathDefault %f32 %u32_0
+               OpExecutionMode %1 DenormPreserve 32
+               OpExecutionMode %1 RoundingModeRTE 32
+               OpName %position_in "position_in"
+               OpName %attr1_in "attr1_in"
+               OpName %attr2_in "attr2_in"
+               OpName %attr1_out "attr1_out"
+               OpName %attr2_out "attr2_out"
+               OpName %position_out "position_out"
+               OpDecorate %position_in BuiltIn Position
+               OpDecorate %attr1_in Location 0
+               OpDecorate %14 ArrayStride 4
+               OpDecorate %attr2_in Location 1
+               OpDecorate %15 ArrayStride 4
+               OpDecorate %attr1_out Location 0
+               OpDecorate %attr2_out Location 1
+               OpDecorate %position_out BuiltIn Position
+        %f32 = OpTypeFloat 32
+      %v4f32 = OpTypeVector %f32 4
+%_ptr_Input_v4f32 = OpTypePointer Input %v4f32
+%_ptr_Output_v4f32 = OpTypePointer Output %v4f32
+        %u32 = OpTypeInt 32 0
+      %u32_2 = OpConstant %u32 2
+         %21 = OpTypeArray %f32 %u32_2
+%_ptr_Input_21 = OpTypePointer Input %21
+%_ptr_Output_f32 = OpTypePointer Output %f32
+         %24 = OpTypeArray %u32 %u32_2
+%_ptr_Input_24 = OpTypePointer Input %24
+%_ptr_Output_u32 = OpTypePointer Output %u32
+       %void = OpTypeVoid
+         %28 = OpTypeFunction %void
+%position_in = OpVariable %_ptr_Input_v4f32 Input
+   %attr1_in = OpVariable %_ptr_Input_21 Input
+         %14 = OpTypeArray %f32 %u32_2
+   %attr2_in = OpVariable %_ptr_Input_24 Input
+         %15 = OpTypeArray %u32 %u32_2
+  %attr1_out = OpVariable %_ptr_Output_f32 Output
+  %attr2_out = OpVariable %_ptr_Output_u32 Output
+   %f32_n0_1 = OpConstant %f32 -0.1
+      %f32_0 = OpConstant %f32 0
+%position_out = OpVariable %_ptr_Output_v4f32 Output
+    %f32_0_1 = OpConstant %f32 0.1
+      %u32_0 = OpConstant %u32 0

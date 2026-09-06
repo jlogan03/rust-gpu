@@ -1,0 +1,55 @@
+               OpCapability Shader
+               OpCapability FloatControls2
+               OpCapability DenormPreserve
+               OpCapability RoundingModeRTE
+               OpExtension "SPV_KHR_float_controls2"
+               OpExtension "SPV_KHR_float_controls"
+               OpMemoryModel Logical Simple
+               OpEntryPoint Vertex %1 "main" %in2 %out1 %out3
+               OpExecutionModeId %1 FPFastMathDefault %f32 %u32_0
+               OpExecutionMode %1 DenormPreserve 32
+               OpExecutionMode %1 RoundingModeRTE 32
+               OpName %in2 "in2"
+               OpName %out1 "out1"
+               OpName %out3 "out3"
+               OpName %__f32__3__as_core__default__Default___default "<[f32; 3] as core::default::Default>::default"
+               OpDecorate %in2 Location 0
+               OpDecorate %10 ArrayStride 4
+               OpDecorate %out1 Location 0
+               OpDecorate %out3 Location 3
+        %u32 = OpTypeInt 32 0
+%_ptr_Input_u32 = OpTypePointer Input %u32
+        %f32 = OpTypeFloat 32
+      %u32_3 = OpConstant %u32 3
+         %14 = OpTypeArray %f32 %u32_3
+%_ptr_Output_14 = OpTypePointer Output %14
+%_ptr_Output_f32 = OpTypePointer Output %f32
+       %void = OpTypeVoid
+         %18 = OpTypeFunction %void
+        %in2 = OpVariable %_ptr_Input_u32 Input
+         %10 = OpTypeArray %f32 %u32_3
+         %19 = OpTypeFunction %10
+      %f32_0 = OpConstant %f32 0
+       %out1 = OpVariable %_ptr_Output_14 Output
+       %out3 = OpVariable %_ptr_Output_f32 Output
+      %u32_0 = OpConstant %u32 0
+          %1 = OpFunction %void None %18
+         %21 = OpLabel
+         %22 = OpLoad %u32 %in2
+         %23 = OpFunctionCall %10 %__f32__3__as_core__default__Default___default
+         %24 = OpCompositeExtract %f32 %23 0
+         %25 = OpCompositeExtract %f32 %23 1
+         %26 = OpCompositeExtract %f32 %23 2
+         %27 = OpCompositeConstruct %14 %24 %25 %26
+               OpStore %out1 %27
+         %28 = OpConvertUToF %f32 %22
+               OpStore %out3 %28
+               OpNoLine
+               OpReturn
+               OpFunctionEnd
+%__f32__3__as_core__default__Default___default = OpFunction %10 None %19
+         %29 = OpLabel
+         %30 = OpCompositeConstruct %10 %f32_0 %f32_0 %f32_0
+               OpNoLine
+               OpReturnValue %30
+               OpFunctionEnd

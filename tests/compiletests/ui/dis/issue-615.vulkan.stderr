@@ -1,0 +1,44 @@
+               OpCapability Shader
+               OpMemoryModel Logical Simple
+               OpEntryPoint Fragment %1 "main" %i %out
+               OpExecutionMode %1 OriginUpperLeft
+          %4 = OpString "$DIR/issue-615.rs"
+          %5 = OpString "$CORE_SRC/num/mod.rs"
+               OpName %Multi "Multi"
+               OpMemberName %Multi 0 "discriminant"
+               OpMemberName %Multi 1 "0"
+               OpMemberName %Multi 2 "1"
+               OpName %Tri "Tri"
+               OpMemberName %Tri 0 "discriminant"
+               OpMemberName %Tri 1 "0"
+               OpMemberName %Tri 2 "1"
+               OpMemberName %Tri 3 "2"
+               OpName %i "i"
+               OpName %out "out"
+               OpName %issue_615__read_multi "issue_615::read_multi"
+               OpName %issue_615__read_tri "issue_615::read_tri"
+               OpDecorate %i Flat
+               OpDecorate %i Location 0
+               OpDecorate %out Location 0
+        %u32 = OpTypeInt 32 0
+%_ptr_Input_u32 = OpTypePointer Input %u32
+%_ptr_Output_u32 = OpTypePointer Output %u32
+       %void = OpTypeVoid
+         %14 = OpTypeFunction %void
+      %Multi = OpTypeStruct %u32 %u32 %u32
+%_ptr_Function_Multi = OpTypePointer Function %Multi
+        %Tri = OpTypeStruct %u32 %u32 %u32 %u32
+%_ptr_Function_Tri = OpTypePointer Function %Tri
+          %i = OpVariable %_ptr_Input_u32 Input
+       %bool = OpTypeBool
+      %u32_0 = OpConstant %u32 0
+%_ptr_Function_u32 = OpTypePointer Function %u32
+      %u32_1 = OpConstant %u32 1
+      %u32_2 = OpConstant %u32 2
+      %u32_3 = OpConstant %u32 3
+         %23 = OpTypeFunction %u32 %_ptr_Function_Multi
+        %i32 = OpTypeInt 32 1
+      %i32_0 = OpConstant %i32 0
+         %26 = OpTypeFunction %u32 %_ptr_Function_Tri
+         %27 = OpUndef %u32
+        %out = OpVariable %_ptr_Output_u32 Output

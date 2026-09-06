@@ -1,0 +1,20 @@
+error: `fast_math` must be specified once, without arguments
+  --> $DIR/invalid-fast-math.rs:5:40
+   |
+LL | #[spirv(compute(threads(1), fast_math, fast_math))]
+   |                                        ^^^^^^^^^
+
+error: `fast_math` must be specified once, without arguments
+  --> $DIR/invalid-fast-math.rs:8:18
+   |
+LL | #[spirv(fragment(fast_math = true))]
+   |                  ^^^^^^^^^^^^^^^^
+
+error: `fast_math` must be specified once, without arguments
+  --> $DIR/invalid-fast-math.rs:11:18
+   |
+LL | #[spirv(fragment(fast_math()))]
+   |                  ^^^^^^^^^^^
+
+error: aborting due to 3 previous errors
+

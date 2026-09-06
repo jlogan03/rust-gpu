@@ -1,0 +1,50 @@
+               OpCapability Shader
+               OpCapability StorageBufferArrayDynamicIndexing
+               OpCapability RuntimeDescriptorArray
+               OpCapability FloatControls2
+               OpCapability DenormPreserve
+               OpCapability RoundingModeRTE
+               OpExtension "SPV_KHR_float_controls2"
+               OpExtension "SPV_KHR_float_controls"
+               OpMemoryModel Logical Simple
+               OpEntryPoint Vertex %1 "main" %index %buffers %out
+               OpExecutionModeId %1 FPFastMathDefault %f32 %u32_0
+               OpExecutionMode %1 DenormPreserve 32
+               OpExecutionMode %1 RoundingModeRTE 32
+               OpName %index "index"
+               OpName %buffers "buffers"
+               OpName %out "out"
+               OpDecorate %_struct_10 Block
+               OpMemberDecorate %_struct_10 0 Offset 0
+               OpDecorate %index Location 0
+               OpDecorate %buffers NonWritable
+               OpDecorate %buffers Binding 0
+               OpDecorate %buffers DescriptorSet 0
+               OpDecorate %out Location 0
+        %u32 = OpTypeInt 32 0
+%_ptr_Input_u32 = OpTypePointer Input %u32
+        %f32 = OpTypeFloat 32
+      %v4f32 = OpTypeVector %f32 4
+ %_struct_10 = OpTypeStruct %v4f32
+%_runtimearr__struct_10 = OpTypeRuntimeArray %_struct_10
+%_ptr_StorageBuffer__runtimearr__struct_10 = OpTypePointer StorageBuffer %_runtimearr__struct_10
+%_ptr_Output_v4f32 = OpTypePointer Output %v4f32
+       %void = OpTypeVoid
+         %18 = OpTypeFunction %void
+      %index = OpVariable %_ptr_Input_u32 Input
+%_ptr_StorageBuffer__struct_10 = OpTypePointer StorageBuffer %_struct_10
+    %buffers = OpVariable %_ptr_StorageBuffer__runtimearr__struct_10 StorageBuffer
+%_ptr_StorageBuffer_v4f32 = OpTypePointer StorageBuffer %v4f32
+      %u32_0 = OpConstant %u32 0
+        %out = OpVariable %_ptr_Output_v4f32 Output
+      %u32_0 = OpConstant %u32 0
+          %1 = OpFunction %void None %18
+         %22 = OpLabel
+         %23 = OpLoad %u32 %index
+         %24 = OpAccessChain %_ptr_StorageBuffer__struct_10 %buffers %23
+         %25 = OpAccessChain %_ptr_StorageBuffer_v4f32 %24 %u32_0
+         %26 = OpLoad %v4f32 %25
+               OpStore %out %26
+               OpNoLine
+               OpReturn
+               OpFunctionEnd

@@ -1,0 +1,83 @@
+               OpCapability Shader
+               OpCapability MeshShadingEXT
+               OpCapability FloatControls2
+               OpCapability DenormPreserve
+               OpCapability RoundingModeRTE
+               OpExtension "SPV_EXT_mesh_shader"
+               OpExtension "SPV_KHR_float_controls2"
+               OpExtension "SPV_KHR_float_controls"
+               OpMemoryModel Logical Simple
+               OpEntryPoint MeshEXT %1 "main" %positions %out_per_vertex %out_per_vertex2 %indices %out_per_primitive %out_per_primitive2
+               OpExecutionMode %1 LocalSize 1 1 1
+               OpExecutionMode %1 OutputVertices 9
+               OpExecutionMode %1 OutputPrimitivesEXT 3
+               OpExecutionMode %1 OutputTrianglesEXT
+               OpExecutionModeId %1 FPFastMathDefault %f32 %u32_0
+               OpExecutionMode %1 DenormPreserve 32
+               OpExecutionMode %1 RoundingModeRTE 32
+               OpName %ops__try_trait__NeverShortCircuit__char__3__ "ops::try_trait::NeverShortCircuit<[char; 3]>"
+               OpName %core__ops__Range_usize_ "core::ops::Range<usize>"
+               OpMemberName %core__ops__Range_usize_ 0 "start"
+               OpMemberName %core__ops__Range_usize_ 1 "end"
+               OpName %positions "positions"
+               OpName %out_per_vertex "out_per_vertex"
+               OpName %out_per_vertex2 "out_per_vertex2"
+               OpName %indices "indices"
+               OpName %out_per_primitive "out_per_primitive"
+               OpName %out_per_primitive2 "out_per_primitive2"
+               OpMemberDecorate %core__ops__Range_usize_ 0 Offset 0
+               OpMemberDecorate %core__ops__Range_usize_ 1 Offset 4
+               OpDecorate %positions BuiltIn Position
+               OpDecorate %out_per_vertex Location 0
+               OpDecorate %out_per_vertex2 Location 1
+               OpDecorate %indices BuiltIn PrimitiveTriangleIndicesEXT
+               OpDecorate %out_per_primitive Location 2
+               OpDecorate %out_per_primitive PerPrimitiveEXT
+               OpDecorate %out_per_primitive2 Location 3
+               OpDecorate %out_per_primitive2 PerPrimitiveEXT
+        %f32 = OpTypeFloat 32
+      %v4f32 = OpTypeVector %f32 4
+        %u32 = OpTypeInt 32 0
+      %u32_9 = OpConstant %u32 9
+         %23 = OpTypeArray %v4f32 %u32_9
+%_ptr_Output_23 = OpTypePointer Output %23
+      %v3u32 = OpTypeVector %u32 3
+      %u32_3 = OpConstant %u32 3
+         %27 = OpTypeArray %v3u32 %u32_3
+%_ptr_Output_27 = OpTypePointer Output %27
+         %29 = OpTypeArray %u32 %u32_9
+%_ptr_Output_29 = OpTypePointer Output %29
+         %31 = OpTypeArray %f32 %u32_9
+%_ptr_Output_31 = OpTypePointer Output %31
+%ops__try_trait__NeverShortCircuit__char__3__ = OpTypeArray %u32 %u32_3
+%_ptr_Output_ops__try_trait__NeverShortCircuit__char__3__ = OpTypePointer Output %ops__try_trait__NeverShortCircuit__char__3__
+         %34 = OpTypeArray %f32 %u32_3
+%_ptr_Output_34 = OpTypePointer Output %34
+       %void = OpTypeVoid
+         %37 = OpTypeFunction %void
+%core__ops__Range_usize_ = OpTypeStruct %u32 %u32
+      %u32_0 = OpConstant %u32 0
+         %39 = OpUndef %core__ops__Range_usize_
+       %bool = OpTypeBool
+ %bool_false = OpConstantFalse %bool
+      %u32_1 = OpConstant %u32 1
+        %i32 = OpTypeInt 32 1
+      %i32_0 = OpConstant %i32 0
+   %f32_n0_5 = OpConstant %f32 -0.5
+    %f32_0_5 = OpConstant %f32 0.5
+      %f32_0 = OpConstant %f32 0
+      %f32_1 = OpConstant %f32 1
+%_ptr_Output_v4f32 = OpTypePointer Output %v4f32
+  %positions = OpVariable %_ptr_Output_23 Output
+      %u32_2 = OpConstant %u32 2
+%_ptr_Output_u32 = OpTypePointer Output %u32
+%out_per_vertex = OpVariable %_ptr_Output_29 Output
+%_ptr_Output_f32 = OpTypePointer Output %f32
+%out_per_vertex2 = OpVariable %_ptr_Output_31 Output
+%_ptr_Output_v3u32 = OpTypePointer Output %v3u32
+    %indices = OpVariable %_ptr_Output_27 Output
+%out_per_primitive = OpVariable %_ptr_Output_ops__try_trait__NeverShortCircuit__char__3__ Output
+     %u32_42 = OpConstant %u32 42
+%out_per_primitive2 = OpVariable %_ptr_Output_34 Output
+     %f32_69 = OpConstant %f32 69
+      %u32_0 = OpConstant %u32 0

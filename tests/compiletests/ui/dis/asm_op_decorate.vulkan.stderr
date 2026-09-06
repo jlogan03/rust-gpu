@@ -1,0 +1,31 @@
+               OpCapability Shader
+               OpCapability RuntimeDescriptorArray
+               OpCapability FloatControls2
+               OpCapability DenormPreserve
+               OpCapability RoundingModeRTE
+               OpExtension "SPV_EXT_descriptor_indexing"
+               OpExtension "SPV_KHR_float_controls2"
+               OpExtension "SPV_KHR_float_controls"
+               OpMemoryModel Logical Simple
+               OpEntryPoint Fragment %1 "main"
+               OpExecutionMode %1 OriginUpperLeft
+               OpExecutionModeId %1 FPFastMathDefault %f32 %u32_0
+               OpExecutionMode %1 DenormPreserve 32
+               OpExecutionMode %1 RoundingModeRTE 32
+          %4 = OpString "$DIR/asm_op_decorate.rs"
+               OpName %asm_op_decorate__main "asm_op_decorate::main"
+               OpName %asm_op_decorate__add_decorate "asm_op_decorate::add_decorate"
+               OpDecorate %7 Binding 0
+               OpDecorate %7 DescriptorSet 0
+       %void = OpTypeVoid
+          %9 = OpTypeFunction %void
+        %f32 = OpTypeFloat 32
+         %10 = OpTypeImage %f32 2D 0 0 0 1 Unknown
+         %11 = OpTypeSampledImage %10
+%_ptr_UniformConstant_11 = OpTypePointer UniformConstant %11
+%_runtimearr_11 = OpTypeRuntimeArray %11
+%_ptr_UniformConstant__runtimearr_11 = OpTypePointer UniformConstant %_runtimearr_11
+          %7 = OpVariable %_ptr_UniformConstant__runtimearr_11 UniformConstant
+        %u32 = OpTypeInt 32 0
+      %u32_1 = OpConstant %u32 1
+      %u32_0 = OpConstant %u32 0

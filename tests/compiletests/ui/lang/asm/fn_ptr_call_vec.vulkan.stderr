@@ -1,0 +1,45 @@
+               OpCapability Shader
+               OpCapability FloatControls2
+               OpCapability DenormPreserve
+               OpCapability RoundingModeRTE
+               OpExtension "SPV_KHR_float_controls2"
+               OpExtension "SPV_KHR_float_controls"
+               OpMemoryModel Logical Simple
+               OpEntryPoint Fragment %1 "main" %a %result
+               OpExecutionMode %1 OriginUpperLeft
+               OpExecutionModeId %1 FPFastMathDefault %f32 %u32_0
+               OpExecutionMode %1 DenormPreserve 32
+               OpExecutionMode %1 RoundingModeRTE 32
+               OpName %a "a"
+               OpName %result "result"
+               OpName %fn_ptr_call_vec__add_one "fn_ptr_call_vec::add_one"
+               OpDecorate %a Location 0
+               OpDecorate %result Location 0
+        %f32 = OpTypeFloat 32
+      %v4f32 = OpTypeVector %f32 4
+%_ptr_Input_v4f32 = OpTypePointer Input %v4f32
+%_ptr_Output_v4f32 = OpTypePointer Output %v4f32
+       %void = OpTypeVoid
+         %14 = OpTypeFunction %void
+          %a = OpVariable %_ptr_Input_v4f32 Input
+         %15 = OpTypeFunction %v4f32 %v4f32
+      %f32_1 = OpConstant %f32 1
+     %result = OpVariable %_ptr_Output_v4f32 Output
+        %u32 = OpTypeInt 32 0
+      %u32_0 = OpConstant %u32 0
+          %1 = OpFunction %void None %14
+         %18 = OpLabel
+         %19 = OpLoad %v4f32 %a
+         %20 = OpFunctionCall %v4f32 %fn_ptr_call_vec__add_one %19
+               OpStore %result %20
+               OpNoLine
+               OpReturn
+               OpFunctionEnd
+%fn_ptr_call_vec__add_one = OpFunction %v4f32 None %15
+         %21 = OpFunctionParameter %v4f32
+         %22 = OpLabel
+         %23 = OpCompositeConstruct %v4f32 %f32_1 %f32_1 %f32_1 %f32_1
+         %24 = OpFAdd %v4f32 %21 %23
+               OpNoLine
+               OpReturnValue %24
+               OpFunctionEnd

@@ -11,6 +11,13 @@ You can run compiletests via `cargo compiletest`, with an alias setup in `.cargo
 which will update their expected stderr output in their associated `.stderr` file, if you 
 promise to **manually verify** the new contents before committing them. 
 
+Vulkan-specific expected output is stored in `test.vulkan.stderr` (or
+`test.revision.vulkan.stderr`). Other targets keep using `test.stderr`.
+For Vulkan runs the runner builds a temporary fixture tree under
+`target/compiletest-inputs/vulkan`; `--bless` writes only differing Vulkan
+expectations back to the source tree. This keeps the generic SPIR-V tests
+independent of Vulkan's floating-point defaults.
+
 Our compiletests use the [`compiletest_rs`](https://github.com/Manishearth/compiletest-rs) library,
 which is the compiletest framework within rustc itself, and some glue code in `src`.
 

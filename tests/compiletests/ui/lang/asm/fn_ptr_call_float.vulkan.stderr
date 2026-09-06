@@ -1,0 +1,43 @@
+               OpCapability Shader
+               OpCapability FloatControls2
+               OpCapability DenormPreserve
+               OpCapability RoundingModeRTE
+               OpExtension "SPV_KHR_float_controls2"
+               OpExtension "SPV_KHR_float_controls"
+               OpMemoryModel Logical Simple
+               OpEntryPoint Fragment %1 "main" %a %result
+               OpExecutionMode %1 OriginUpperLeft
+               OpExecutionModeId %1 FPFastMathDefault %f32 %u32_0
+               OpExecutionMode %1 DenormPreserve 32
+               OpExecutionMode %1 RoundingModeRTE 32
+               OpName %a "a"
+               OpName %result "result"
+               OpName %fn_ptr_call_float__add_one "fn_ptr_call_float::add_one"
+               OpDecorate %a Location 0
+               OpDecorate %result Location 0
+        %f32 = OpTypeFloat 32
+%_ptr_Input_f32 = OpTypePointer Input %f32
+%_ptr_Output_f32 = OpTypePointer Output %f32
+       %void = OpTypeVoid
+         %11 = OpTypeFunction %void
+          %a = OpVariable %_ptr_Input_f32 Input
+         %12 = OpTypeFunction %f32 %f32
+      %f32_1 = OpConstant %f32 1
+     %result = OpVariable %_ptr_Output_f32 Output
+        %u32 = OpTypeInt 32 0
+      %u32_0 = OpConstant %u32 0
+          %1 = OpFunction %void None %11
+         %15 = OpLabel
+         %16 = OpLoad %f32 %a
+         %17 = OpFunctionCall %f32 %fn_ptr_call_float__add_one %16
+               OpStore %result %17
+               OpNoLine
+               OpReturn
+               OpFunctionEnd
+%fn_ptr_call_float__add_one = OpFunction %f32 None %12
+         %18 = OpFunctionParameter %f32
+         %19 = OpLabel
+         %20 = OpFAdd %f32 %18 %f32_1
+               OpNoLine
+               OpReturnValue %20
+               OpFunctionEnd

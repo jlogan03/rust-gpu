@@ -160,12 +160,31 @@ impl Runner {
             let mut flags = test_rustc_flags(&self.codegen_backend_path, &libs, &search_dirs);
             flags += variation.extra_flags;
 
+            // Vulkan now deliberately has different floating-point defaults
+            // from generic SPIR-V. compiletest-rs has no target-specific golden
+            // files, so run against a generated fixture tree with Vulkan
+            // overrides, leaving the source tree untouched during normal runs.
+            let original_src = self.tests_dir.join(mode.to_string());
+            let vulkan_src =
+                PathBuf::from("../../target/compiletest-inputs/vulkan").join(mode.to_string());
+            let is_vulkan = env.starts_with("vulkan");
+            if is_vulkan {
+                if vulkan_src.exists() {
+                    std::fs::remove_dir_all(&vulkan_src).unwrap();
+                }
+                copy_vulkan_fixtures(&original_src, &vulkan_src);
+            }
+
             let config = compiletest::Config {
                 stage_id,
                 target_rustcflags: Some(flags),
                 mode,
                 target: target_spec.target.into_string().unwrap(),
-                src_base: self.tests_dir.join(mode.to_string()),
+                src_base: if is_vulkan {
+                    vulkan_src.clone()
+                } else {
+                    original_src.clone()
+                },
                 build_base: self.compiletest_build_dir.clone(),
                 bless: self.opt.bless,
                 filters: self.opt.filters.clone(),
@@ -175,6 +194,9 @@ impl Runner {
             config.clean_rmeta();
 
             compiletest::run_tests(&config);
+            if is_vulkan && self.opt.bless {
+                bless_vulkan_fixtures(&original_src, &vulkan_src);
+            }
         }
     }
 
@@ -228,6 +250,50 @@ impl Runner {
             .status()
             .and_then(map_status_to_result)
             .unwrap();
+    }
+}
+
+fn copy_vulkan_fixtures(source: &Path, destination: &Path) {
+    std::fs::create_dir_all(destination).unwrap();
+    for entry in std::fs::read_dir(source).unwrap() {
+        let entry = entry.unwrap();
+        let path = entry.path();
+        let output = destination.join(entry.file_name());
+        if path.is_dir() {
+            copy_vulkan_fixtures(&path, &output);
+        } else if let Some(name) = entry
+            .file_name()
+            .to_str()
+            .and_then(|name| name.strip_suffix(".vulkan.stderr"))
+        {
+            std::fs::copy(&path, destination.join(format!("{name}.stderr"))).unwrap();
+        } else {
+            let override_path = path.with_extension("vulkan.stderr");
+            let input =
+                if path.extension().is_some_and(|ext| ext == "stderr") && override_path.exists() {
+                    override_path
+                } else {
+                    path
+                };
+            std::fs::copy(input, output).unwrap();
+        }
+    }
+}
+
+fn bless_vulkan_fixtures(source: &Path, generated: &Path) {
+    for entry in std::fs::read_dir(generated).unwrap() {
+        let entry = entry.unwrap();
+        let path = entry.path();
+        let original = source.join(entry.file_name());
+        if path.is_dir() {
+            bless_vulkan_fixtures(&original, &path);
+        } else if path.extension().is_some_and(|ext| ext == "stderr") {
+            let actual = std::fs::read(&path).unwrap();
+            let expected = std::fs::read(&original).unwrap_or_default();
+            if actual != expected {
+                std::fs::write(original.with_extension("vulkan.stderr"), actual).unwrap();
+            }
+        }
     }
 }
 

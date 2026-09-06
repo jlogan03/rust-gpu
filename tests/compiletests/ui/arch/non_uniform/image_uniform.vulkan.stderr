@@ -1,0 +1,58 @@
+               OpCapability Shader
+               OpCapability SampledImageArrayDynamicIndexing
+               OpCapability RuntimeDescriptorArray
+               OpCapability FloatControls2
+               OpCapability DenormPreserve
+               OpCapability RoundingModeRTE
+               OpExtension "SPV_KHR_float_controls2"
+               OpExtension "SPV_KHR_float_controls"
+               OpMemoryModel Logical Simple
+               OpEntryPoint Vertex %1 "main" %index %images %out
+               OpExecutionModeId %1 FPFastMathDefault %f32 %u32_0
+               OpExecutionMode %1 DenormPreserve 32
+               OpExecutionMode %1 RoundingModeRTE 32
+               OpName %index "index"
+               OpName %images "images"
+               OpName %out "out"
+               OpName %_glam__f32__scalar__vec4__Vec4_as_spirv_std__vector__VectorTruncateInto_glam__f32__scalar__vec4__Vec4____truncate_into "<glam::f32::scalar::vec4::Vec4 as spirv_std::vector::VectorTruncateInto<glam::f32::scalar::vec4::Vec4>>::truncate_into"
+               OpDecorate %index Location 0
+               OpDecorate %images Binding 0
+               OpDecorate %images DescriptorSet 0
+               OpDecorate %out Location 0
+        %u32 = OpTypeInt 32 0
+%_ptr_Input_u32 = OpTypePointer Input %u32
+        %f32 = OpTypeFloat 32
+         %13 = OpTypeImage %f32 2D 2 0 0 1 Unknown
+%_runtimearr_13 = OpTypeRuntimeArray %13
+%_ptr_UniformConstant__runtimearr_13 = OpTypePointer UniformConstant %_runtimearr_13
+      %v4f32 = OpTypeVector %f32 4
+%_ptr_Output_v4f32 = OpTypePointer Output %v4f32
+       %void = OpTypeVoid
+         %19 = OpTypeFunction %void
+      %index = OpVariable %_ptr_Input_u32 Input
+%_ptr_UniformConstant_13 = OpTypePointer UniformConstant %13
+     %images = OpVariable %_ptr_UniformConstant__runtimearr_13 UniformConstant
+      %v2u32 = OpTypeVector %u32 2
+      %u32_1 = OpConstant %u32 1
+      %u32_2 = OpConstant %u32 2
+      %u32_0 = OpConstant %u32 0
+         %25 = OpTypeFunction %v4f32 %v4f32
+        %out = OpVariable %_ptr_Output_v4f32 Output
+      %u32_0 = OpConstant %u32 0
+          %1 = OpFunction %void None %19
+         %26 = OpLabel
+         %27 = OpLoad %u32 %index
+         %28 = OpAccessChain %_ptr_UniformConstant_13 %images %27
+         %29 = OpCompositeConstruct %v2u32 %u32_1 %u32_2
+         %30 = OpLoad %13 %28
+         %31 = OpImageFetch %v4f32 %30 %29 Lod %u32_0
+         %32 = OpFunctionCall %v4f32 %_glam__f32__scalar__vec4__Vec4_as_spirv_std__vector__VectorTruncateInto_glam__f32__scalar__vec4__Vec4____truncate_into %31
+               OpStore %out %32
+               OpNoLine
+               OpReturn
+               OpFunctionEnd
+%_glam__f32__scalar__vec4__Vec4_as_spirv_std__vector__VectorTruncateInto_glam__f32__scalar__vec4__Vec4____truncate_into = OpFunction %v4f32 None %25
+         %33 = OpFunctionParameter %v4f32
+         %34 = OpLabel
+               OpReturnValue %33
+               OpFunctionEnd

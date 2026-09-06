@@ -1,0 +1,8 @@
+error: `fast_math` requires a Vulkan target
+  --> $DIR/non-vulkan.rs:7:8
+   |
+LL | pub fn main() {}
+   |        ^^^^
+
+error: aborting due to 1 previous error
+

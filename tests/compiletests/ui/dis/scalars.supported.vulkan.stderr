@@ -1,0 +1,102 @@
+               OpCapability Shader
+               OpCapability Float64
+               OpCapability Int64
+               OpCapability Int16
+               OpCapability Int8
+               OpCapability FloatControls2
+               OpCapability DenormPreserve
+               OpCapability RoundingModeRTE
+               OpExtension "SPV_KHR_float_controls2"
+               OpExtension "SPV_KHR_float_controls"
+               OpMemoryModel Logical Simple
+               OpEntryPoint Fragment %1 "main" %in_u8 %in_u16 %in_u32 %in_u64 %in_i8 %in_i16 %in_i32 %in_i64 %in_f32 %in_f64 %out
+               OpExecutionMode %1 OriginUpperLeft
+               OpExecutionModeId %1 FPFastMathDefault %f32 %u32_0
+               OpExecutionMode %1 DenormPreserve 32
+               OpExecutionMode %1 RoundingModeRTE 32
+               OpExecutionModeId %1 FPFastMathDefault %f64 %u32_0
+               OpExecutionMode %1 DenormPreserve 64
+               OpExecutionMode %1 RoundingModeRTE 64
+         %16 = OpString "$DIR/scalars.rs"
+               OpName %in_u8 "in_u8"
+               OpName %in_u16 "in_u16"
+               OpName %in_u32 "in_u32"
+               OpName %in_u64 "in_u64"
+               OpName %in_i8 "in_i8"
+               OpName %in_i16 "in_i16"
+               OpName %in_i32 "in_i32"
+               OpName %in_i64 "in_i64"
+               OpName %in_f32 "in_f32"
+               OpName %in_f64 "in_f64"
+               OpName %out "out"
+               OpDecorate %in_u8 Flat
+               OpDecorate %in_u8 Location 0
+               OpDecorate %in_u16 Flat
+               OpDecorate %in_u16 Location 1
+               OpDecorate %in_u32 Flat
+               OpDecorate %in_u32 Location 2
+               OpDecorate %in_u64 Flat
+               OpDecorate %in_u64 Location 3
+               OpDecorate %in_i8 Flat
+               OpDecorate %in_i8 Location 4
+               OpDecorate %in_i16 Flat
+               OpDecorate %in_i16 Location 5
+               OpDecorate %in_i32 Flat
+               OpDecorate %in_i32 Location 6
+               OpDecorate %in_i64 Flat
+               OpDecorate %in_i64 Location 7
+               OpDecorate %in_f32 Location 8
+               OpDecorate %in_f64 Flat
+               OpDecorate %in_f64 Location 9
+               OpDecorate %out Location 0
+        %u32 = OpTypeInt 32 0
+%_ptr_Output_u32 = OpTypePointer Output %u32
+         %u8 = OpTypeInt 8 0
+%_ptr_Input_u8 = OpTypePointer Input %u8
+        %u16 = OpTypeInt 16 0
+%_ptr_Input_u16 = OpTypePointer Input %u16
+%_ptr_Input_u32 = OpTypePointer Input %u32
+        %u64 = OpTypeInt 64 0
+%_ptr_Input_u64 = OpTypePointer Input %u64
+         %i8 = OpTypeInt 8 1
+%_ptr_Input_i8 = OpTypePointer Input %i8
+        %i16 = OpTypeInt 16 1
+%_ptr_Input_i16 = OpTypePointer Input %i16
+        %i32 = OpTypeInt 32 1
+%_ptr_Input_i32 = OpTypePointer Input %i32
+        %i64 = OpTypeInt 64 1
+%_ptr_Input_i64 = OpTypePointer Input %i64
+        %f32 = OpTypeFloat 32
+%_ptr_Input_f32 = OpTypePointer Input %f32
+        %f64 = OpTypeFloat 64
+%_ptr_Input_f64 = OpTypePointer Input %f64
+       %void = OpTypeVoid
+         %37 = OpTypeFunction %void
+      %in_u8 = OpVariable %_ptr_Input_u8 Input
+     %in_u16 = OpVariable %_ptr_Input_u16 Input
+     %in_u32 = OpVariable %_ptr_Input_u32 Input
+     %in_u64 = OpVariable %_ptr_Input_u64 Input
+      %in_i8 = OpVariable %_ptr_Input_i8 Input
+     %in_i16 = OpVariable %_ptr_Input_i16 Input
+     %in_i32 = OpVariable %_ptr_Input_i32 Input
+     %in_i64 = OpVariable %_ptr_Input_i64 Input
+     %in_f32 = OpVariable %_ptr_Input_f32 Input
+     %in_f64 = OpVariable %_ptr_Input_f64 Input
+       %u8_8 = OpConstant %u8 8
+        %out = OpVariable %_ptr_Output_u32 Output
+     %u16_16 = OpConstant %u16 16
+     %u32_32 = OpConstant %u32 32
+     %u64_64 = OpConstant %u64 64
+      %i8_n8 = OpConstant %i8 -8
+    %i16_n16 = OpConstant %i16 -16
+    %i32_n32 = OpConstant %i32 -32
+    %i64_n64 = OpConstant %i64 -64
+     %f32_32 = OpConstant %f32 32
+      %u32_0 = OpConstant %u32 0
+%u32_1333788671 = OpConstant %u32 1333788671
+       %bool = OpTypeBool
+%u32_4294967295 = OpConstant %u32 4294967295
+     %f64_64 = OpConstant %f64 64
+      %u64_0 = OpConstant %u64 0
+%u64_4751297606873776128 = OpConstant %u64 4751297606873776128
+      %u32_0 = OpConstant %u32 0
