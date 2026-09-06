@@ -17,6 +17,18 @@ use rustc_span::{Ident, Span, Symbol};
 use smallvec::SmallVec;
 use std::rc::Rc;
 
+// Match rustc's LLVMRustSetAlgebraicMath: notably, no NotNaN/NotInf assumptions.
+pub(crate) const ALGEBRAIC_MATH_FLAGS: u32 = rspirv::spirv::FPFastMathMode::ALLOW_REASSOC.bits()
+    | rspirv::spirv::FPFastMathMode::ALLOW_CONTRACT.bits()
+    | rspirv::spirv::FPFastMathMode::ALLOW_RECIP.bits()
+    | rspirv::spirv::FPFastMathMode::NSZ.bits();
+
+// Unsafe *_fast intrinsics have stronger preconditions than safe algebraic ops.
+pub(crate) const UNSAFE_FAST_MATH_FLAGS: u32 = ALGEBRAIC_MATH_FLAGS
+    | rspirv::spirv::FPFastMathMode::NOT_NAN.bits()
+    | rspirv::spirv::FPFastMathMode::NOT_INF.bits()
+    | rspirv::spirv::FPFastMathMode::ALLOW_TRANSFORM.bits();
+
 // FIXME(eddyb) replace with `ArrayVec<[Word; 3]>`.
 #[derive(Copy, Clone, Debug)]
 pub struct ExecutionModeExtra {
@@ -42,6 +54,7 @@ impl AsRef<[u32]> for ExecutionModeExtra {
 
 #[derive(Clone, Debug)]
 pub struct Entry {
+    pub fast_math: bool,
     pub execution_model: ExecutionModel,
     pub execution_modes: Vec<(ExecutionMode, ExecutionModeExtra)>,
     pub name: Option<Symbol>,
@@ -50,6 +63,7 @@ pub struct Entry {
 impl From<ExecutionModel> for Entry {
     fn from(execution_model: ExecutionModel) -> Self {
         Self {
+            fast_math: false,
             execution_model,
             execution_modes: Vec::new(),
             name: None,
@@ -769,7 +783,16 @@ fn parse_entry_attrs(
     if let Some(attrs) = arg.meta_item_list() {
         for attr in attrs {
             if let Some(attr_name) = attr.ident() {
-                if let Some((execution_mode, extra_dim)) = sym.execution_modes.get(&attr_name.name)
+                if attr_name.name.as_str() == "fast_math" {
+                    if !attr.is_word() || entry.fast_math {
+                        return Err((
+                            attr.span(),
+                            "`fast_math` must be specified once, without arguments".into(),
+                        ));
+                    }
+                    entry.fast_math = true;
+                } else if let Some((execution_mode, extra_dim)) =
+                    sym.execution_modes.get(&attr_name.name)
                 {
                     use crate::symbols::ExecutionModeExtraDim::*;
                     let val = match extra_dim {

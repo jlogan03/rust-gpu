@@ -40,6 +40,37 @@ pub fn compute_1() {}
 pub fn compute_2() {}
 ```
 
+### Floating-point policy (Vulkan)
+
+Vulkan entry points preserve subnormal arithmetic, use round-to-nearest/ties-to-even,
+and disable reassociation, implicit FMA contraction and reciprocal transformations
+by default. Signed zero, NaN and infinity are not assumed away.
+
+Use `fast_math` inside an entry-point attribute to allow these transformations,
+ignore signed-zero distinctions and flush subnormals to zero:
+
+```rust
+#[spirv(compute(threads(64), fast_math))]
+pub fn fast_compute() {}
+
+#[spirv(fragment(fast_math))]
+pub fn fast_fragment() {}
+```
+
+The policy is per entry point, including its callees; a shared helper inherits
+the calling entry point's policy. Explicit Rust `algebraic_*` operations allow
+reassociation, contraction, reciprocal transformations and ignoring signed zero
+under either policy, but inherit the entry point's subnormal and rounding modes.
+Neither safe policy assumes that inputs cannot be NaN or infinity. Explicit
+`mul_add` is fused under both policies.
+
+These controls use `SPV_KHR_float_controls2`. Applications must enable Vulkan
+`shaderFloatControls2` and check the relevant per-width float-control properties.
+There is no silent fallback on unsupported devices. This is not a guarantee of
+full IEEE-754 accuracy for division or transcendental functions. 
+
+Non-Vulkan targets retain their previous defaults and do not support `fast_math`.
+
 ### Override entry point name
 
 You can override the default `OpEntryPoint` name for any entry point with the `entry_point_name` sub-attribute on any of the execution model attributes. (e.g. `#[spirv(vertex(entry_point_name="foo"))]`)

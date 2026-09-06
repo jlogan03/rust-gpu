@@ -131,6 +131,47 @@ impl<'tcx> CodegenCx<'tcx> {
             name,
             entry.execution_model,
         );
+        if self
+            .tcx
+            .sess
+            .target
+            .options
+            .env
+            .desc()
+            .starts_with("vulkan")
+        {
+            // Seed the policy with f32. The linker expands it to the floating-point
+            // widths reachable from this entry point once imports are resolved.
+            let float = SpirvType::Float(32).def(span, self);
+            let flags = if entry.fast_math {
+                crate::attr::ALGEBRAIC_MATH_FLAGS
+            } else {
+                0
+            };
+            let flags =
+                rustc_codegen_ssa::traits::ConstCodegenMethods::const_u32(self, flags).def_cx(self);
+            let mut emit = self.emit_global();
+            emit.extension("SPV_KHR_float_controls2");
+            emit.capability(rspirv::spirv::Capability::FloatControls2);
+            // rspirv's execution_mode_id helper incorrectly uses literal operands.
+            emit.module_mut()
+                .execution_modes
+                .push(rspirv::dr::Instruction::new(
+                    rspirv::spirv::Op::ExecutionModeId,
+                    None,
+                    None,
+                    vec![
+                        Operand::IdRef(stub.id),
+                        Operand::ExecutionMode(rspirv::spirv::ExecutionMode::FPFastMathDefault),
+                        Operand::IdRef(float),
+                        Operand::IdRef(flags),
+                    ],
+                ));
+        } else if entry.fast_math {
+            self.tcx
+                .dcx()
+                .span_err(span, "`fast_math` requires a Vulkan target");
+        }
         let mut emit = self.emit_global();
         entry
             .execution_modes

@@ -56,6 +56,11 @@ fn all_inst_iter(func: &Function) -> impl DoubleEndedIterator<Item = &Instructio
 
 fn spread_roots(module: &Module, rooted: &mut FxIndexSet<Word>) -> bool {
     let mut any = false;
+    for inst in &module.execution_modes {
+        if rooted.contains(&inst.operands[0].unwrap_id_ref()) {
+            any |= root(inst, rooted);
+        }
+    }
     for inst in module.global_inst_iter() {
         if let Some(id) = inst.result_id
             && rooted.contains(&id)
@@ -114,7 +119,7 @@ fn kill_unrooted(module: &mut Module, rooted: &FxIndexSet<Word>) {
         .retain(|inst| is_rooted(inst, rooted));
     module
         .execution_modes
-        .retain(|inst| is_rooted(inst, rooted));
+        .retain(|inst| rooted.contains(&inst.operands[0].unwrap_id_ref()));
     module
         .debug_string_source
         .retain(|inst| is_rooted(inst, rooted));
