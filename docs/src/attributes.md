@@ -42,14 +42,19 @@ pub fn compute_2() {}
 
 ### Floating-point policy (Vulkan)
 
-Vulkan entry points preserve subnormal arithmetic, use round-to-nearest/ties-to-even,
-and disable reassociation, implicit FMA contraction and reciprocal transformations
-by default. Signed zero, NaN and infinity are not assumed away.
+Unannotated entry points retain their existing floating-point behavior and do not
+acquire new float-control feature requirements. Vulkan entry points can opt into
+`rust_math` to preserve subnormal arithmetic, use round-to-nearest/ties-to-even,
+and disable reassociation, implicit FMA contraction and reciprocal transformations.
+Signed zero, NaN and infinity are not assumed away in this mode.
 
 Use `fast_math` inside an entry-point attribute to allow these transformations,
 ignore signed-zero distinctions and flush subnormals to zero:
 
 ```rust
+#[spirv(compute(threads(64), rust_math))]
+pub fn strict_compute() {}
+
 #[spirv(compute(threads(64), fast_math))]
 pub fn fast_compute() {}
 
@@ -57,19 +62,25 @@ pub fn fast_compute() {}
 pub fn fast_fragment() {}
 ```
 
-The policy is per entry point, including its callees; a shared helper inherits
-the calling entry point's policy. Explicit Rust `algebraic_*` operations allow
+The two annotations are mutually exclusive and take no arguments. The policy is
+per entry point, including its callees. A helper shared between legacy and opted-in
+entry points is specialized as needed to keep their operation policies separate.
+Within either opted-in mode, explicit Rust `algebraic_*` operations allow
 reassociation, contraction, reciprocal transformations and ignoring signed zero
-under either policy, but inherit the entry point's subnormal and rounding modes.
+but inherit the entry point's subnormal and rounding modes. Legacy entry points
+retain the previous lowering of algebraic and unsafe fast intrinsics.
 Neither safe policy assumes that inputs cannot be NaN or infinity. Explicit
 `mul_add` is fused under both policies.
 
-These controls use `SPV_KHR_float_controls2`. Applications must enable Vulkan
+Both opt-in modes use `SPV_KHR_float_controls2`. Applications must enable Vulkan
 `shaderFloatControls2` and check the relevant per-width float-control properties.
 There is no silent fallback on unsupported devices. This is not a guarantee of
 full IEEE-754 accuracy for division or transcendental functions. 
 
-Non-Vulkan targets retain their previous defaults and do not support `fast_math`.
+Non-Vulkan targets retain their previous defaults and support neither annotation.
+Capabilities are module-wide: a module containing any opted-in entry point can
+require the new features even when selecting a legacy entry point. Compile to
+separate modules to deploy legacy shaders on devices without those features.
 
 ### Override entry point name
 

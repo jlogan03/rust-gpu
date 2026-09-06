@@ -13,10 +13,15 @@ use spirv_std::spirv;
 
 #[inline(never)]
 fn shared(a: f32, b: f32) -> f32 {
-    (a + b) - a
+    (a.algebraic_add(b) + b) - a
 }
 
 #[spirv(compute(threads(1)))]
+pub fn legacy(#[spirv(storage_buffer, descriptor_set = 0, binding = 0)] data: &mut [f32; 2]) {
+    data[0] = shared(data[0], data[1]);
+}
+
+#[spirv(compute(threads(1), rust_math))]
 pub fn strict(#[spirv(storage_buffer, descriptor_set = 0, binding = 0)] data: &mut [f32; 2]) {
     data[0] = shared(data[0], data[1]);
     data[1] = data[0].algebraic_add(data[1]);
@@ -27,7 +32,7 @@ pub fn fast(#[spirv(storage_buffer, descriptor_set = 0, binding = 0)] data: &mut
     data[0] = shared(data[0], data[1]);
 }
 
-#[spirv(compute(threads(1)))]
+#[spirv(compute(threads(1), rust_math))]
 pub fn double(#[spirv(storage_buffer, descriptor_set = 0, binding = 0)] data: &mut [f64; 2]) {
     data[0] = (data[0] + data[1]) - data[0];
 }

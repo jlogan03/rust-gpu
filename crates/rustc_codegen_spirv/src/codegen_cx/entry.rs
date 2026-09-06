@@ -131,19 +131,20 @@ impl<'tcx> CodegenCx<'tcx> {
             name,
             entry.execution_model,
         );
-        if self
-            .tcx
-            .sess
-            .target
-            .options
-            .env
-            .desc()
-            .starts_with("vulkan")
+        if entry.math_mode.is_some()
+            && self
+                .tcx
+                .sess
+                .target
+                .options
+                .env
+                .desc()
+                .starts_with("vulkan")
         {
             // Seed the policy with f32. The linker expands it to the floating-point
             // widths reachable from this entry point once imports are resolved.
             let float = SpirvType::Float(32).def(span, self);
-            let flags = if entry.fast_math {
+            let flags = if matches!(entry.math_mode, Some(crate::attr::MathMode::Fast)) {
                 crate::attr::ALGEBRAIC_MATH_FLAGS
             } else {
                 0
@@ -167,10 +168,10 @@ impl<'tcx> CodegenCx<'tcx> {
                         Operand::IdRef(flags),
                     ],
                 ));
-        } else if entry.fast_math {
+        } else if entry.math_mode.is_some() {
             self.tcx
                 .dcx()
-                .span_err(span, "`fast_math` requires a Vulkan target");
+                .span_err(span, "`rust_math` and `fast_math` require a Vulkan target");
         }
         let mut emit = self.emit_global();
         entry

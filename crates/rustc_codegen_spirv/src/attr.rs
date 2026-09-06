@@ -54,7 +54,7 @@ impl AsRef<[u32]> for ExecutionModeExtra {
 
 #[derive(Clone, Debug)]
 pub struct Entry {
-    pub fast_math: bool,
+    pub math_mode: Option<MathMode>,
     pub execution_model: ExecutionModel,
     pub execution_modes: Vec<(ExecutionMode, ExecutionModeExtra)>,
     pub name: Option<Symbol>,
@@ -63,12 +63,18 @@ pub struct Entry {
 impl From<ExecutionModel> for Entry {
     fn from(execution_model: ExecutionModel) -> Self {
         Self {
-            fast_math: false,
+            math_mode: None,
             execution_model,
             execution_modes: Vec::new(),
             name: None,
         }
     }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum MathMode {
+    Rust,
+    Fast,
 }
 
 /// `struct` types that are used to represent special SPIR-V types.
@@ -783,14 +789,18 @@ fn parse_entry_attrs(
     if let Some(attrs) = arg.meta_item_list() {
         for attr in attrs {
             if let Some(attr_name) = attr.ident() {
-                if attr_name.name.as_str() == "fast_math" {
-                    if !attr.is_word() || entry.fast_math {
+                if matches!(attr_name.name.as_str(), "rust_math" | "fast_math") {
+                    if !attr.is_word() || entry.math_mode.is_some() {
                         return Err((
                             attr.span(),
-                            "`fast_math` must be specified once, without arguments".into(),
+                            "specify only one of `rust_math` or `fast_math`, once and without arguments".into(),
                         ));
                     }
-                    entry.fast_math = true;
+                    entry.math_mode = Some(if attr_name.name.as_str() == "rust_math" {
+                        MathMode::Rust
+                    } else {
+                        MathMode::Fast
+                    });
                 } else if let Some((execution_mode, extra_dim)) =
                     sym.execution_modes.get(&attr_name.name)
                 {

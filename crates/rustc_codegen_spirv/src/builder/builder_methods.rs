@@ -139,10 +139,10 @@ macro_rules! simple_op {
                     $(
                         if self.tcx.sess.target.options.env.desc().starts_with("vulkan") {
                             let mut emit = self.emit_global();
-                            emit.extension("SPV_KHR_float_controls2");
-                            emit.capability(rspirv::spirv::Capability::FloatControls2);
-                            emit.decorate(*result.as_ref().unwrap(), rspirv::spirv::Decoration::FPFastMathMode,
-                                [Operand::FPFastMathMode(rspirv::spirv::FPFastMathMode::from_bits_retain($math_flags))]);
+                            // Private, temporary marker: the linker resolves this
+                            // only for callees of explicitly opted-in entry points.
+                            emit.decorate(*result.as_ref().unwrap(), rspirv::spirv::Decoration::UserSemantic,
+                                [Operand::LiteralString(format!("rust_gpu.math_flags:{}", $math_flags))]);
                         }
                     )?
                     result

@@ -8,7 +8,7 @@
 
 use spirv_std::spirv;
 
-#[spirv(fragment)]
+#[spirv(fragment(rust_math))]
 pub fn strict(#[spirv(location = 0)] input: f32, #[spirv(location = 0)] output: &mut f32) {
     *output = (input + 1.0) - input;
 }

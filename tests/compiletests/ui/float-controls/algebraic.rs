@@ -10,7 +10,7 @@
 
 use spirv_std::{num_traits::Float, spirv};
 
-#[spirv(compute(threads(1)))]
+#[spirv(compute(threads(1), rust_math))]
 pub fn main(#[spirv(storage_buffer, descriptor_set = 0, binding = 0)] data: &mut [f32; 8]) {
     let (a, b) = (data[0], data[1]);
     data[0] = a.algebraic_add(b);

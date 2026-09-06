@@ -9,7 +9,7 @@
 
 use spirv_std::spirv;
 
-#[spirv(compute(threads(1)))]
+#[spirv(compute(threads(1), rust_math))]
 pub fn mixed(
     #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] half: &mut f16,
     #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] double: &mut f64,
