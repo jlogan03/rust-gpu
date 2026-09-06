@@ -10,6 +10,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed 🛠
 
 - [PR#637](https://github.com/Rust-GPU/rust-gpu/pull/637) upgraded `bitflags` dependency from 1.x to 2.x
+
+#### Rust-like floating-point defaults
+
+Vulkan entry points default to preserving subnormals and disabling implicit
+arithmetic reordering, using `SPV_KHR_float_controls2`.
+
+A per-entrypoint `fast_math` annotation enables fast-math semantics as that
+entrypoint's default, allowing reordering and clamping subnormals to zero
+without affecting other code.
+
+Explicit Rust algebraic operations allow reordering and automatic FMA
+even if the entrypoint's default does not (same as Rust).
+
+| Behavior | Default entrypoint | `fast_math` entrypoint | Explicit Rust algebraic operation |
+| --- | --- | --- | --- |
+| Algrebraic reordering | Disabled | Allowed | Allowed |
+| Implicit FMA contraction | Disabled | Allowed | Allowed |
+| Reciprocal transformations | Disabled | Allowed | Allowed |
+| Signed-zero distinction | Preserved | May be ignored | May be ignored |
+| Assume inputs cannot be NaN or infinity | No | No | No |
+| Subnormal arithmetic | Preserve | Flush to zero | Inherits entrypoint policy |
+| Rounding | Nearest, ties to even | Nearest, ties to even | Inherits entrypoint policy |
+
  
 ## [0.10.0-alpha.1](https://github.com/Rust-GPU/rust-gpu/compare/v0.9.0...v0.10.0-alpha.1) - 2026-04-13
 
