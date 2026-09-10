@@ -73,6 +73,7 @@ impl From<ExecutionModel> for Entry {
 
 #[derive(Clone, Copy, Debug)]
 pub enum MathMode {
+    Compat,
     Rust,
     Fast,
 }
@@ -789,17 +790,20 @@ fn parse_entry_attrs(
     if let Some(attrs) = arg.meta_item_list() {
         for attr in attrs {
             if let Some(attr_name) = attr.ident() {
-                if matches!(attr_name.name.as_str(), "rust_math" | "fast_math") {
+                if matches!(
+                    attr_name.name.as_str(),
+                    "compat_math" | "rust_math" | "fast_math"
+                ) {
                     if !attr.is_word() || entry.math_mode.is_some() {
                         return Err((
                             attr.span(),
-                            "specify only one of `rust_math` or `fast_math`, once and without arguments".into(),
+                            "specify only one of `compat_math`, `rust_math` or `fast_math`, once and without arguments".into(),
                         ));
                     }
-                    entry.math_mode = Some(if attr_name.name.as_str() == "rust_math" {
-                        MathMode::Rust
-                    } else {
-                        MathMode::Fast
+                    entry.math_mode = Some(match attr_name.name.as_str() {
+                        "compat_math" => MathMode::Compat,
+                        "rust_math" => MathMode::Rust,
+                        _ => MathMode::Fast,
                     });
                 } else if let Some((execution_mode, extra_dim)) =
                     sym.execution_modes.get(&attr_name.name)

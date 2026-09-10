@@ -55,7 +55,7 @@ fn read_tri(e: &Tri) -> u32 {
     }
 }
 
-#[spirv(fragment)]
+#[spirv(fragment(compat_math))]
 pub fn main(#[spirv(flat)] i: u32, out: &mut u32) {
     let m = if i > 0 { Multi::A(i) } else { Multi::B(1, 2) };
     let t = if i > 1 {

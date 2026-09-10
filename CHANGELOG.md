@@ -10,23 +10,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed 🛠
 
 - [PR#637](https://github.com/Rust-GPU/rust-gpu/pull/637) upgraded `bitflags` dependency from 1.x to 2.x
-- [ ]() add opt-in `rust_math` and `fast_math` floating-point policies
+- [ ]() default to `rust_math`, with explicit `compat_math` and `fast_math` floating-point policies
 
-#### Opt-in floating-point policies
+#### Floating-point policies
 
-Unannotated entry points retain their existing floating-point behavior without
-new feature requirements. Vulkan entry points can opt into `rust_math` to preserve
-subnormals and disable implicit arithmetic reordering using `SPV_KHR_float_controls2`.
+Unannotated Vulkan entry points use `rust_math`, preserving subnormals and disabling
+implicit arithmetic reordering using `SPV_KHR_float_controls2`. An explicit
+`rust_math` annotation selects the same behavior. `compat_math` retains the previous
+no-flags behavior without introducing new float-control feature requirements.
 
 A mutually exclusive per-entrypoint `fast_math` annotation allows reordering and
-clamping subnormals to zero. Both opt-in modes require device support; `fast_math`
+clamping subnormals to zero. Both `rust_math` and `fast_math` require device support; `fast_math`
 is not a fallback for devices lacking float controls.
 
-Within either opt-in mode, explicit Rust algebraic operations allow reordering
-and automatic FMA even when ordinary operations do not. Legacy entry points
+Within either `rust_math` or `fast_math`, explicit Rust algebraic operations allow reordering
+and automatic FMA even when ordinary operations do not. `compat_math` entry points
 retain the old intrinsic lowering; shared helpers are specialized as needed.
 
-| Behavior | Default (unannotated Vulkan entrypoint) | `rust_math` entrypoint | `fast_math` entrypoint | Explicit Rust algebraic operation (opt-in modes) |
+| Behavior | `compat_math` entrypoint | Default / `rust_math` entrypoint | `fast_math` entrypoint | Explicit Rust algebraic operation (`rust_math` / `fast_math`) |
 | --- | --- | --- | --- | --- |
 | Algebraic reordering | Allowed | Disabled | Allowed | Allowed |
 | Implicit FMA contraction | Allowed | Disabled | Allowed | Allowed |
@@ -36,12 +37,12 @@ retain the old intrinsic lowering; shared helpers are specialized as needed.
 | Subnormal arithmetic | May flush to zero | Preserve | Flush to zero | Inherits entrypoint policy |
 | Rounding | Implementation-defined | Nearest, ties to even | Nearest, ties to even | Inherits entrypoint policy |
 
-The default column describes ordinary arithmetic without additional float-control
+The `compat_math` column describes ordinary arithmetic without additional float-control
 execution modes or decorations, following the
 [Vulkan floating-point rules](https://docs.vulkan.org/spec/latest/appendices/spirvenv.html#spirvenv-precision-operation).
 
 Feature requirements are module-wide. Use separate output modules to deploy
-legacy entry points independently of opted-in entry points.
+`compat_math` entry points independently of `rust_math` or `fast_math` entry points.
 
  
 ## [0.10.0-alpha.1](https://github.com/Rust-GPU/rust-gpu/compare/v0.9.0...v0.10.0-alpha.1) - 2026-04-13

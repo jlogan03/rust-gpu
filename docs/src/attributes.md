@@ -42,11 +42,14 @@ pub fn compute_2() {}
 
 ### Floating-point policy (Vulkan)
 
-Unannotated entry points retain their existing floating-point behavior and do not
-acquire new float-control feature requirements. Vulkan entry points can opt into
-`rust_math` to preserve subnormal arithmetic, use round-to-nearest/ties-to-even,
+Unannotated Vulkan entry points use `rust_math`: they preserve subnormal arithmetic,
+use round-to-nearest/ties-to-even,
 and disable reassociation, implicit FMA contraction and reciprocal transformations.
 Signed zero, NaN and infinity are not assumed away in this mode.
+
+An explicit `rust_math` annotation selects the same policy. Use `compat_math` to
+retain the previous no-flags behavior without introducing float-control feature
+requirements.
 
 Use `fast_math` inside an entry-point attribute to allow these transformations,
 ignore signed-zero distinctions and flush subnormals to zero:
@@ -55,6 +58,9 @@ ignore signed-zero distinctions and flush subnormals to zero:
 #[spirv(compute(threads(64), rust_math))]
 pub fn strict_compute() {}
 
+#[spirv(compute(threads(64), compat_math))]
+pub fn compatible_compute() {}
+
 #[spirv(compute(threads(64), fast_math))]
 pub fn fast_compute() {}
 
@@ -62,25 +68,29 @@ pub fn fast_compute() {}
 pub fn fast_fragment() {}
 ```
 
-The two annotations are mutually exclusive and take no arguments. The policy is
-per entry point, including its callees. A helper shared between legacy and opted-in
-entry points is specialized as needed to keep their operation policies separate.
-Within either opted-in mode, explicit Rust `algebraic_*` operations allow
+The three annotations are mutually exclusive and take no arguments. The policy is
+per entry point, including its callees. A helper shared between `compat_math` and
+`rust_math`/`fast_math` entry points is specialized as needed to keep their
+operation policies separate.
+Within either `rust_math` or `fast_math`, explicit Rust `algebraic_*` operations allow
 reassociation, contraction, reciprocal transformations and ignoring signed zero
-but inherit the entry point's subnormal and rounding modes. Legacy entry points
+but inherit the entry point's subnormal and rounding modes. `compat_math` entry points
 retain the previous lowering of algebraic and unsafe fast intrinsics.
 Neither safe policy assumes that inputs cannot be NaN or infinity. Explicit
 `mul_add` is fused under both policies.
 
-Both opt-in modes use `SPV_KHR_float_controls2`. Applications must enable Vulkan
+Both `rust_math` (including the unannotated default) and `fast_math` use
+`SPV_KHR_float_controls2`. Applications must enable Vulkan
 `shaderFloatControls2` and check the relevant per-width float-control properties.
 There is no silent fallback on unsupported devices. This is not a guarantee of
 full IEEE-754 accuracy for division or transcendental functions. 
 
-Non-Vulkan targets retain their previous defaults and support neither annotation.
-Capabilities are module-wide: a module containing any opted-in entry point can
-require the new features even when selecting a legacy entry point. Compile to
-separate modules to deploy legacy shaders on devices without those features.
+Non-Vulkan targets retain their previous defaults; `compat_math` is a no-op there,
+while explicit `rust_math` and `fast_math` require a Vulkan target.
+Capabilities are module-wide: a module containing any `rust_math` or `fast_math`
+entry point can require the new features even when selecting a `compat_math`
+entry point. Compile to separate modules to deploy compatibility-mode shaders on
+devices without those features.
 
 ### Override entry point name
 

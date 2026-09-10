@@ -12,7 +12,7 @@
 
 use spirv_std::spirv;
 
-#[spirv(fragment)]
+#[spirv(fragment(compat_math))]
 pub fn main(output: &mut f32) {
     // Test f64 to f32 (narrowing)
     const BIG: f64 = 123.456;

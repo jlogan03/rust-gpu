@@ -16,7 +16,7 @@
 use spirv_std::glam::*;
 use spirv_std::{Image, spirv};
 
-#[spirv(vertex)]
+#[spirv(vertex(compat_math))]
 pub fn main<T: Copy>(in1: T, out1: &mut T) {
     *out1 = in1;
 }

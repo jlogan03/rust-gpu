@@ -140,7 +140,7 @@ macro_rules! simple_op {
                         if self.tcx.sess.target.options.env.desc().starts_with("vulkan") {
                             let mut emit = self.emit_global();
                             // Private, temporary marker: the linker resolves this
-                            // only for callees of explicitly opted-in entry points.
+                            // only for callees using rust_math or fast_math.
                             emit.decorate(*result.as_ref().unwrap(), rspirv::spirv::Decoration::UserSemantic,
                                 [Operand::LiteralString(format!("rust_gpu.math_flags:{}", $math_flags))]);
                         }

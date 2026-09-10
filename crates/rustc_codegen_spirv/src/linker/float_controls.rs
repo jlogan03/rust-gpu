@@ -41,7 +41,7 @@ pub(super) fn take_policies(module: &mut Module) -> Vec<(String, ExecutionModel,
 }
 
 /// Keep legacy intrinsic lowering unchanged, even when a helper is shared with
-/// an opted-in entry point. Resolve private codegen markers before SPIR-T or
+/// a rust_math or fast_math entry point. Resolve private codegen markers before SPIR-T or
 /// optimizers see the module; user-authored SPIR-V decorations are untouched.
 fn resolve_operation_policies(module: &mut Module) {
     use rspirv::spirv::Decoration;

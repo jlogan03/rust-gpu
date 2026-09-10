@@ -19,6 +19,7 @@ use spirv_std::glam::{UVec3, Vec4};
 use spirv_std::spirv;
 
 #[spirv(mesh_ext(
+    compat_math,
     threads(1),
     output_vertices = 9,
     output_primitives_ext = 3,

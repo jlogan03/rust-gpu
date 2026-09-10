@@ -24,7 +24,7 @@ pub struct ManyFloats {
     c: f32,
 }
 
-#[spirv(vertex)]
+#[spirv(vertex(compat_math))]
 pub fn main(out1: &mut ManyFloats, out2: &mut f32) {
     const {
         assert!(size_of::<ManyFloats>() == 12);

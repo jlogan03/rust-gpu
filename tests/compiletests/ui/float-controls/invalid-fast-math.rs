@@ -19,3 +19,15 @@ pub fn duplicate_rust() {}
 
 #[spirv(fragment(rust_math = true))]
 pub fn rust_value() {}
+
+#[spirv(fragment(compat_math, rust_math))]
+pub fn compat_rust() {}
+
+#[spirv(fragment(fast_math, compat_math))]
+pub fn compat_fast() {}
+
+#[spirv(fragment(compat_math, compat_math))]
+pub fn compat_duplicate() {}
+
+#[spirv(fragment(compat_math()))]
+pub fn compat_arguments() {}

@@ -12,7 +12,7 @@ fn use_cmp(cmp: fn(&Position) -> u32) {
     let _ = if cmp(&a) <= cmp(&b) { a } else { b };
 }
 
-#[spirv(compute(threads(1)))]
+#[spirv(compute(compat_math, threads(1)))]
 pub fn main() {
     use_cmp(|p| p.0);
 }

@@ -131,7 +131,7 @@ impl<'tcx> CodegenCx<'tcx> {
             name,
             entry.execution_model,
         );
-        if entry.math_mode.is_some()
+        if !matches!(entry.math_mode, Some(crate::attr::MathMode::Compat))
             && self
                 .tcx
                 .sess
@@ -168,7 +168,10 @@ impl<'tcx> CodegenCx<'tcx> {
                         Operand::IdRef(flags),
                     ],
                 ));
-        } else if entry.math_mode.is_some() {
+        } else if matches!(
+            entry.math_mode,
+            Some(crate::attr::MathMode::Rust | crate::attr::MathMode::Fast)
+        ) {
             self.tcx
                 .dcx()
                 .span_err(span, "`rust_math` and `fast_math` require a Vulkan target");

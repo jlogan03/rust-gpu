@@ -22,7 +22,7 @@ pub struct LargerThanVec4 {
     b: Vec2,
 }
 
-#[spirv(vertex)]
+#[spirv(vertex(compat_math))]
 pub fn main(
     #[spirv(location = 4)] out1: &mut LargerThanVec4,
     out2: &mut Vec2, // should be 6
