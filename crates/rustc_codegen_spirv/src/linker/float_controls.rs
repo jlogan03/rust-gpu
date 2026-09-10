@@ -117,15 +117,21 @@ fn resolve_operation_policies(module: &mut Module) {
         })
         .map(|f| f.def.as_ref().unwrap().result_id.unwrap())
         .collect();
-    loop {
-        let mut changed = false;
-        for (&caller, callees) in &calls {
-            if callees.iter().any(|id| needs_policy.contains(id)) {
-                changed |= needs_policy.insert(caller);
-            }
+    // Walk backward from marked functions instead of rescanning every call.
+    let mut callers: HashMap<u32, Vec<u32>> = HashMap::new();
+    for (&caller, callees) in &calls {
+        for &callee in callees {
+            callers.entry(callee).or_default().push(caller);
         }
-        if !changed {
-            break;
+    }
+    let mut pending: Vec<u32> = needs_policy.iter().copied().collect();
+    while let Some(callee) = pending.pop() {
+        if let Some(parents) = callers.get(&callee) {
+            for &caller in parents {
+                if needs_policy.insert(caller) {
+                    pending.push(caller);
+                }
+            }
         }
     }
     let mut remap = HashMap::new();
