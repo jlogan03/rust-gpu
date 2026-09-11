@@ -163,7 +163,7 @@ config.write_metadata(&metadata)?;
 ### Install cargo-nextest:
 
 ```sh
-cargo install cargo-nextest --locked
+cargo install cargo-nextest
 ```
 
 ### Run all difftests:
@@ -172,21 +172,13 @@ cargo install cargo-nextest --locked
 cargo difftest
 ```
 
-Run this command from the repository. `cargo difftest` is an alias in
-`.cargo/config.toml` for `cargo nextest run --release -P difftests -p difftests`;
-there is no separate `cargo-difftest` tool to install.
-
-The existing Rust shaders use `#[spirv(compute(threads(...), compat_math))]` to
-remain compatible with the difftest runners. Naga does not support the float-control
-extensions emitted by the Vulkan default, and the ash difftest runner does not
-enable the corresponding device features. New tests using these runners should
-also select `compat_math`; tests for explicit float controls need a runner that
-supports and enables their requirements.
+Note that `cargo difftest` is an alias in `.cargo/config` for `cargo run --release -p
+difftest --`.
 
 ### Run specific tests by name:
 
 ```sh
-cargo difftest vector_extract_insert
+cargo difftest some_test_name
 ```
 
 ### Show stdout/stderr from tests:
