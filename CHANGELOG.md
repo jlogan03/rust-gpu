@@ -23,20 +23,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Feature requirements are module-wide
   * Must use separate output modules to deploy `compat_math` entry points independently of `rust_math` or `fast_math` entry points
 * Not all targets support enough/any float controls to match Rust
-  * Vulkan<1.4 does not have the FloatControls2 interface
+  * Vulkan 1.1–1.3 requires `VK_KHR_shader_float_controls2`; the interface is core in Vulkan 1.4
   * WGSL does not expose any float controls at all
     * Upstream extension requires changes to WGSL spec; may not land because it would limit compatibility
   * WGPU naga does not support float controls even if targeting SPIR-V output
     * Upstream extension is possible but would not cover all output targets
 * These settings do not guarantee that the hardware has properly implemented IEEE-754
 
+##### Target compatibility
+
+The unannotated default is `rust_math` only on Vulkan targets. Non-Vulkan targets retain their previous
+defaults and reject explicit `rust_math` and `fast_math` annotations. The table describes compatibility
+with these policies; other shader features may impose additional requirements.
+
+| Target / consumer | Default (no annotation) | `rust_math` | `fast_math` | `compat_math` |
+| --- | --- | --- | --- | --- |
+| Vulkan 1.4 (`spirv-unknown-vulkan1.4`) | Yes, with required device support | Yes, with required device support | Yes, with required device support | Yes |
+| Vulkan 1.1–1.3 with `VK_KHR_shader_float_controls2` | Yes, with required device support | Yes, with required device support | Yes, with required device support | Yes |
+| Vulkan 1.1–1.3 without `VK_KHR_shader_float_controls2` | No | No | No | Yes |
+| Vulkan 1.0 (`spirv-unknown-vulkan1.0`) | No | No | No | Yes |
+| Generic SPIR-V (`spirv-unknown-spv*`) | Yes, target defaults | No | No | Yes, target defaults |
+| OpenGL (`spirv-unknown-opengl*`) | Yes, target defaults | No | No | Yes, target defaults |
+| WGSL via Naga (`spirv-unknown-naga-wgsl`) | Yes, WGSL defaults | No | No | Yes, WGSL defaults |
+| Vulkan-targeted SPIR-V consumed through wgpu/Naga, including Vulkan output | No | No | No | Yes |
+
+Required device support means enabling `shaderFloatControls2` and supporting the selected controls
+for every floating-point width used: round-to-nearest-even plus denormal preservation for `rust_math`,
+or round-to-nearest-even plus flush-to-zero for `fast_math`. Vulkan 1.1 also requires
+`VK_KHR_shader_float_controls` (core in Vulkan 1.2). There is no automatic fallback to `compat_math`.
+See the [Vulkan extension requirements](https://docs.vulkan.org/refpages/latest/refpages/source/VK_KHR_shader_float_controls2.html).
+
+The wgpu example runner explicitly selects `compat_math`. The ash example runner enables
+`shaderFloatControls2` and uses the Vulkan default. `compat_math` compatibility assumes a separate module containing
+only `compat_math` entry points; selecting one from a mixed-policy module does not remove its
+module-wide feature requirements.
+
 ##### Details
 
-A per-entrypoint annotation in [`rust_math` (default), `fast_math`, `compat_math`] determines float controls flags.
+A per-entrypoint annotation in [`rust_math` (Vulkan default), `fast_math`, `compat_math`] determines float controls flags.
 
 `rust_math` and `fast_math` emit control flags that map to the Vulkan FloatControls2 API. While this is technically a Vulkan-specific pattern, it matches closely to historical CPU flags, and can be expected to map to other float control APIs reasonably well.
 
-`rust_math` is the default. It reflects Rust's strict floating-point semantics.
+`rust_math` is the Vulkan default. It reflects Rust's strict floating-point semantics.
 `fast_math` is a qualitative environment. Nothing in particular can be said about its validity except that it looks fine sometimes.
 
 `compat_math` emits no flags, maximizing compatibility but leaving float semantics to be determined by the target's default.
