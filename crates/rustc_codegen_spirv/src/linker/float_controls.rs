@@ -412,6 +412,8 @@ pub(super) fn remove_unused_capabilities(module: &mut Module) {
     let preserve = has_mode(ExecutionMode::DenormPreserve);
     let flush = has_mode(ExecutionMode::DenormFlushToZero);
     let rte = has_mode(ExecutionMode::RoundingModeRTE);
+    let rtz = has_mode(ExecutionMode::RoundingModeRTZ);
+    let preserve_special = has_mode(ExecutionMode::SignedZeroInfNanPreserve);
     module
         .capabilities
         .retain(|inst| match inst.operands[0].unwrap_capability() {
@@ -419,11 +421,18 @@ pub(super) fn remove_unused_capabilities(module: &mut Module) {
             Capability::DenormPreserve => preserve,
             Capability::DenormFlushToZero => flush,
             Capability::RoundingModeRTE => rte,
+            Capability::RoundingModeRTZ => rtz,
+            Capability::SignedZeroInfNanPreserve => preserve_special,
             _ => true,
         });
-    if !controls2 {
-        module
-            .extensions
-            .retain(|inst| inst.operands[0].unwrap_literal_string() != "SPV_KHR_float_controls2");
-    }
+    // Consumers such as Naga reject unsupported extensions even without any
+    // corresponding capabilities. The original extension also covers legacy
+    // RTZ and signed-zero/Inf/NaN modes, not just the modes our policies emit.
+    module
+        .extensions
+        .retain(|inst| match inst.operands[0].unwrap_literal_string() {
+            "SPV_KHR_float_controls" => preserve || flush || rte || rtz || preserve_special,
+            "SPV_KHR_float_controls2" => controls2,
+            _ => true,
+        });
 }
