@@ -1,0 +1,27 @@
+               OpCapability Shader
+               OpCapability Float64
+               OpCapability DenormFlushToZero
+               OpCapability SignedZeroInfNanPreserve
+               OpCapability RoundingModeRTZ
+               OpCapability VulkanMemoryModel
+               OpMemoryModel Logical Vulkan
+               OpEntryPoint GLCompute %1 "manual" %data
+               OpExecutionMode %1 LocalSize 1 1 1
+               OpExecutionMode %1 DenormFlushToZero 64
+               OpExecutionMode %1 SignedZeroInfNanPreserve 64
+               OpExecutionMode %1 RoundingModeRTZ 64
+               OpName %data "data"
+               OpDecorate %_struct_4 Block
+               OpMemberDecorate %_struct_4 0 Offset 0
+               OpDecorate %data Binding 0
+               OpDecorate %data DescriptorSet 0
+        %f64 = OpTypeFloat 64
+  %_struct_4 = OpTypeStruct %f64
+%_ptr_StorageBuffer__struct_4 = OpTypePointer StorageBuffer %_struct_4
+       %void = OpTypeVoid
+          %8 = OpTypeFunction %void
+%_ptr_StorageBuffer_f64 = OpTypePointer StorageBuffer %f64
+       %data = OpVariable %_ptr_StorageBuffer__struct_4 StorageBuffer
+        %u32 = OpTypeInt 32 0
+      %u32_0 = OpConstant %u32 0
+      %f64_1 = OpConstant %f64 1

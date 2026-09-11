@@ -348,15 +348,26 @@ pub(super) fn restore_policies(module: &mut Module, policies: Vec<(String, Execu
             };
             capabilities.extend([capability, Capability::RoundingModeRTE]);
             for execution_mode in [denorm, ExecutionMode::RoundingModeRTE] {
+                // Matching source attributes already provide this mode. Reuse
+                // them, comparing the width as well as the entry and mode.
+                let operands = vec![
+                    Operand::IdRef(entry),
+                    Operand::ExecutionMode(execution_mode),
+                    Operand::LiteralBit32(width),
+                ];
+                if builder
+                    .module_ref()
+                    .execution_modes
+                    .iter()
+                    .any(|inst| inst.operands == operands)
+                {
+                    continue;
+                }
                 builder.module_mut().execution_modes.push(Instruction::new(
                     Op::ExecutionMode,
                     None,
                     None,
-                    vec![
-                        Operand::IdRef(entry),
-                        Operand::ExecutionMode(execution_mode),
-                        Operand::LiteralBit32(width),
-                    ],
+                    operands,
                 ));
             }
         }

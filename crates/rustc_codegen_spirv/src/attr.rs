@@ -56,7 +56,7 @@ impl AsRef<[u32]> for ExecutionModeExtra {
 pub struct Entry {
     pub math_mode: Option<MathMode>,
     pub execution_model: ExecutionModel,
-    pub execution_modes: Vec<(ExecutionMode, ExecutionModeExtra)>,
+    pub execution_modes: Vec<Spanned<(ExecutionMode, ExecutionModeExtra)>>,
     pub name: Option<Symbol>,
 }
 
@@ -130,7 +130,7 @@ pub enum SpirvAttribute {
 
 // HACK(eddyb) this is similar to `rustc_span::Spanned` but with `value` as the
 // field name instead of `node` (which feels inadequate in this context).
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Spanned<T> {
     pub value: T,
     pub span: Span,
@@ -870,15 +870,11 @@ fn parse_entry_attrs(
                             }
                         },*/
                         _ => {
-                            if let Some(val) = val {
-                                entry
-                                    .execution_modes
-                                    .push((*execution_mode, ExecutionModeExtra::new([val])));
-                            } else {
-                                entry
-                                    .execution_modes
-                                    .push((*execution_mode, ExecutionModeExtra::new([])));
-                            }
+                            let extra = ExecutionModeExtra::new(val.as_slice());
+                            entry.execution_modes.push(Spanned {
+                                value: (*execution_mode, extra),
+                                span: attr.span(),
+                            });
                         }
                     }
                 } else if attr_name.name == sym.entry_point_name {
@@ -912,15 +908,17 @@ fn parse_entry_attrs(
     match entry.execution_model {
         Fragment => {
             let origin_mode = origin_mode.unwrap_or(OriginUpperLeft);
-            entry
-                .execution_modes
-                .push((origin_mode, ExecutionModeExtra::new([])));
+            entry.execution_modes.push(Spanned {
+                value: (origin_mode, ExecutionModeExtra::new([])),
+                span: arg.span(),
+            });
         }
         GLCompute | MeshNV | TaskNV | TaskEXT | MeshEXT => {
             if let Some(local_size) = local_size {
-                entry
-                    .execution_modes
-                    .push((LocalSize, ExecutionModeExtra::new(local_size)));
+                entry.execution_modes.push(Spanned {
+                    value: (LocalSize, ExecutionModeExtra::new(local_size)),
+                    span: arg.span(),
+                });
             } else {
                 return Err((
                     arg.span(),

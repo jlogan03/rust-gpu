@@ -2,24 +2,24 @@
                OpCapability Float16
                OpCapability Float64
                OpCapability StorageBuffer16BitAccess
-               OpCapability VulkanMemoryModel
-               OpCapability FloatControls2
+               OpCapability DenormPreserve
                OpCapability DenormFlushToZero
                OpCapability RoundingModeRTE
-               OpCapability DenormPreserve
+               OpCapability VulkanMemoryModel
+               OpCapability FloatControls2
                OpExtension "SPV_KHR_float_controls2"
                OpExtension "SPV_KHR_float_controls"
                OpMemoryModel Logical Vulkan
                OpEntryPoint GLCompute %1 "fast_double" %data
                OpEntryPoint GLCompute %3 "mixed" %half %double
                OpExecutionMode %1 LocalSize 1 1 1
-               OpExecutionMode %3 LocalSize 1 1 1
-               OpExecutionModeId %1 FPFastMathDefault %f64 %u32_196620
                OpExecutionMode %1 DenormFlushToZero 64
                OpExecutionMode %1 RoundingModeRTE 64
-               OpExecutionModeId %3 FPFastMathDefault %f16 %u32_0
+               OpExecutionMode %3 LocalSize 1 1 1
                OpExecutionMode %3 DenormPreserve 16
                OpExecutionMode %3 RoundingModeRTE 16
+               OpExecutionModeId %1 FPFastMathDefault %f64 %u32_196620
+               OpExecutionModeId %3 FPFastMathDefault %f16 %u32_0
                OpExecutionModeId %3 FPFastMathDefault %f64 %u32_0
                OpExecutionMode %3 DenormPreserve 64
                OpExecutionMode %3 RoundingModeRTE 64
