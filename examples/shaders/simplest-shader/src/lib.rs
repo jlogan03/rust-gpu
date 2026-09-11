@@ -5,12 +5,14 @@
 use shared::glam::{Vec4, vec4};
 use spirv_std::spirv;
 
-#[spirv(fragment)]
+#[cfg_attr(feature = "compat-math", spirv(fragment(compat_math)))]
+#[cfg_attr(not(feature = "compat-math"), spirv(fragment))]
 pub fn main_fs(output: &mut Vec4) {
     *output = vec4(1.0, 0.0, 0.0, 1.0);
 }
 
-#[spirv(vertex)]
+#[cfg_attr(feature = "compat-math", spirv(vertex(compat_math)))]
+#[cfg_attr(not(feature = "compat-math"), spirv(vertex))]
 pub fn main_vs(
     #[spirv(vertex_index)] vert_id: i32,
     #[spirv(position, invariant)] out_pos: &mut Vec4,
