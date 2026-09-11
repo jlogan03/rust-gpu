@@ -14,18 +14,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Floating-point policies
 
-Unannotated Vulkan entry points use `rust_math`, preserving subnormals and disabling
-implicit arithmetic reordering using `SPV_KHR_float_controls2`. An explicit
-`rust_math` annotation selects the same behavior. `compat_math` retains the previous
-no-flags behavior without introducing new float-control feature requirements.
+##### Constraints
 
-A mutually exclusive per-entrypoint `fast_math` annotation allows reordering and
-clamping subnormals to zero. Both `rust_math` and `fast_math` require device support; `fast_math`
-is not a fallback for devices lacking float controls.
+* Vulkan requires roundoff behavior and subnormal handling are configured per-entrypoint (similar to CPU environments)
+  * This means nested kernels inherit the parent kernel's settings, even if they aren't the right ones
+  * Ideally, each kernel would be able to control its own execution requirements, but that's not supported by APIs (and probably not supported by hardware)
+  * This is somewhat achievable in the same way as in Rust on CPU: use `rust_math` strict mode as the blanket setting, and use explicit algebraic operations to opt out locally
+* Feature requirements are module-wide
+  * Must use separate output modules to deploy `compat_math` entry points independently of `rust_math` or `fast_math` entry points
+* Not all targets support enough/any float controls to match Rust
+  * Vulkan<1.4 does not have the FloatControls2 interface
+  * WGSL does not expose any float controls at all
+    * Upstream extension requires changes to WGSL spec; may not land because it would limit compatibility
+  * WGPU naga does not support float controls even if targeting SPIR-V output
+    * Upstream extension is possible but would not cover all output targets
+* These settings do not guarantee that the hardware has properly implemented IEEE-754
 
-Within either `rust_math` or `fast_math`, explicit Rust algebraic operations allow reordering
-and automatic FMA even when ordinary operations do not. `compat_math` entry points
-retain the old intrinsic lowering; shared helpers are specialized as needed.
+##### Details
+
+A per-entrypoint annotation in [`rust_math` (default), `fast_math`, `compat_math`] determines float controls flags.
+
+`rust_math` and `fast_math` emit control flags that map to the Vulkan FloatControls2 API. While this is technically a Vulkan-specific pattern, it matches closely to historical CPU flags, and can be expected to map to other float control APIs reasonably well.
+
+`rust_math` is the default. It reflects Rust's strict floating-point semantics.
+`fast_math` is a qualitative environment. Nothing in particular can be said about its validity except that it looks fine sometimes.
+
+`compat_math` emits no flags, maximizing compatibility but leaving float semantics to be determined by the target's default.
+Targets' default behavior varies widely; WGSL's default is even less strict than `fast_math`, while CUDA
+is similar to `rust_math`, and Vulkan's default falls in the middle. Hardware and firmware introduce further variance
+in defaults and feature support.
 
 | Behavior | `compat_math` entrypoint | Default / `rust_math` entrypoint | `fast_math` entrypoint | Explicit Rust algebraic operation (`rust_math` / `fast_math`) |
 | --- | --- | --- | --- | --- |
@@ -37,12 +54,9 @@ retain the old intrinsic lowering; shared helpers are specialized as needed.
 | Subnormal arithmetic | May flush to zero | Preserve | Flush to zero | Inherits entrypoint policy |
 | Rounding | Implementation-defined | Nearest, ties to even | Nearest, ties to even | Inherits entrypoint policy |
 
-The `compat_math` column describes ordinary arithmetic without additional float-control
-execution modes or decorations, following the
-[Vulkan floating-point rules](https://docs.vulkan.org/spec/latest/appendices/spirvenv.html#spirvenv-precision-operation).
+##### References
 
-Feature requirements are module-wide. Use separate output modules to deploy
-`compat_math` entry points independently of `rust_math` or `fast_math` entry points.
+[Vulkan floating-point rules](https://docs.vulkan.org/spec/latest/appendices/spirvenv.html#spirvenv-precision-operation).
 
  
 ## [0.10.0-alpha.1](https://github.com/Rust-GPU/rust-gpu/compare/v0.9.0...v0.10.0-alpha.1) - 2026-04-13
