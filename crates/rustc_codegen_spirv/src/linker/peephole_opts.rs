@@ -12,6 +12,8 @@ pub fn collect_types(module: &Module) -> FxHashMap<Word, Instruction> {
         .collect()
 }
 
+/// Index explicit operation permissions once for all functions. Keep zero masks:
+/// they prohibit fast math, whereas a missing decoration inherits the default.
 pub fn collect_fast_math_modes(module: &Module) -> FxHashMap<Word, FPFastMathMode> {
     module
         .annotations
@@ -452,6 +454,9 @@ pub fn vector_ops(
                 &mut block.instructions,
                 &mut instruction_index,
             ) {
+                // The replacement is ready, but the original construct still
+                // identifies its scalar lanes. The index accounts for any operand
+                // vectors inserted by process_instruction.
                 let components = &block.instructions[instruction_index].operands;
                 if components
                     .iter()
@@ -472,6 +477,9 @@ pub fn vector_ops(
                         })
                         .reduce(|a, b| a & b)
                         .unwrap();
+                    // Decorate the vector result even when the intersection is
+                    // empty, so it cannot regain permissions from the entry point.
+                    // Scalar decorations remain valid for any other scalar uses.
                     annotations.push(Instruction::new(
                         Op::Decorate,
                         None,

@@ -131,6 +131,8 @@ impl<'tcx> CodegenCx<'tcx> {
             name,
             entry.execution_model,
         );
+        // Vulkan defaults to rust_math. Compatibility mode and unannotated
+        // non-Vulkan entry points leave the floating-point environment implicit.
         if !matches!(entry.math_mode, Some(crate::attr::MathMode::Compat))
             && self
                 .tcx
@@ -144,6 +146,8 @@ impl<'tcx> CodegenCx<'tcx> {
             // Seed the policy with f32. The linker expands it to the floating-point
             // widths reachable from this entry point once imports are resolved.
             let float = SpirvType::Float(32).def(span, self);
+            // fast_math grants the safe algebraic permissions, without assuming
+            // finite inputs. An explicit zero mask disables those permissions.
             let flags = if matches!(entry.math_mode, Some(crate::attr::MathMode::Fast)) {
                 crate::attr::ALGEBRAIC_MATH_FLAGS
             } else {

@@ -1,4 +1,9 @@
-//! Resolve entry-point floating-point policies after linking and dead-code removal.
+//! Preserve floating-point policies through the linker pipeline.
+//!
+//! Before SPIR-T, resolve intrinsic markers into operation decorations and save
+//! entry-point defaults outside the module. After SPIR-T, expand those defaults
+//! to the reachable float widths. After module splitting and DCE, discard any
+//! float-control capabilities that the surviving code no longer needs.
 
 use rspirv::dr::{Instruction, Module, Operand};
 use rspirv::spirv::{Capability, ExecutionMode, ExecutionModel, Op};
@@ -9,12 +14,16 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 // Carry the entry policy by name across that pipeline, then materialize modes
 // before SPIRV-Tools performs any arithmetic optimization or validation.
 pub(super) fn take_policies(module: &mut Module) -> Vec<(String, ExecutionModel, u32)> {
+    // Intrinsic lowering needs to know which entry points have explicit policies,
+    // so resolve it before removing their FPFastMathDefault modes.
     resolve_operation_policies(module);
     let mut policies = Vec::new();
     module.execution_modes.retain(|mode| {
         if mode.operands.get(1) != Some(&Operand::ExecutionMode(ExecutionMode::FPFastMathDefault)) {
             return true;
         }
+        // SPIR-T can change IDs. Preserve the entry's name and execution model
+        // as its identity, and decode the flag constant while it is still present.
         let entry = module
             .entry_points
             .iter()
@@ -45,6 +54,8 @@ pub(super) fn take_policies(module: &mut Module) -> Vec<(String, ExecutionModel,
 /// optimizers see the module; user-authored SPIR-V decorations are untouched.
 fn resolve_operation_policies(module: &mut Module) {
     use rspirv::spirv::Decoration;
+    // Consume only our private markers. Whether they become real decorations
+    // depends on the calling entry points; legacy-only uses stay undecorated.
     let mut marked = HashMap::new();
     module.annotations.retain(|inst| {
         if inst.operands.get(1) == Some(&Operand::Decoration(Decoration::UserSemantic))
@@ -73,6 +84,8 @@ fn resolve_operation_policies(module: &mut Module) {
     if explicit.is_empty() {
         return;
     }
+    // Partition the call graph by reachability from explicit-policy and legacy
+    // entry points. A shared helper can belong to both sets.
     let calls: HashMap<_, Vec<_>> = module
         .functions
         .iter()
@@ -134,6 +147,9 @@ fn resolve_operation_policies(module: &mut Module) {
             }
         }
     }
+    // Keep the original shared functions for legacy callers, and allocate fresh
+    // IDs for copies used by explicit-policy callers. Allocate every ID first so
+    // calls between cloned functions can be redirected with the same map.
     let mut remap = HashMap::new();
     let mut clones = Vec::new();
     for f in &module.functions {
@@ -169,6 +185,9 @@ fn resolve_operation_policies(module: &mut Module) {
             }
         }
     };
+    // Redirect explicit-policy calls to the copies and materialize intrinsic
+    // flags on their arithmetic results. Read markers using the original IDs
+    // before rewriting them; the emitted decorations use the final IDs.
     let mut decorate = Vec::new();
     for f in module
         .functions
@@ -198,6 +217,8 @@ fn resolve_operation_policies(module: &mut Module) {
             }
         }
     }
+    // Cloned instructions also need their existing decorations and debug names.
+    // Retain the originals and distinguish cloned function names in diagnostics.
     for section in [&mut module.annotations, &mut module.debug_names] {
         let extra: Vec<_> = section
             .iter()
@@ -225,43 +246,11 @@ fn resolve_operation_policies(module: &mut Module) {
     module.annotations.extend(decorate);
 }
 
+/// Emit final execution modes directly from the policies saved before SPIR-T.
 pub(super) fn restore_policies(module: &mut Module, policies: Vec<(String, ExecutionModel, u32)>) {
     if policies.is_empty() {
         return;
     }
-    let mut builder = rspirv::dr::Builder::new_from_module(std::mem::take(module));
-    let float = builder.type_float(32, None);
-    let uint = builder.type_int(32, 0);
-    for (name, model, flags) in policies {
-        let entry = builder
-            .module_ref()
-            .entry_points
-            .iter()
-            .find(|entry| {
-                entry.operands[2].unwrap_literal_string() == name
-                    && entry.operands[0] == Operand::ExecutionModel(model)
-            })
-            .unwrap()
-            .operands[1]
-            .unwrap_id_ref();
-        let flags = builder.constant_bit32(uint, flags);
-        builder.module_mut().execution_modes.push(Instruction::new(
-            Op::ExecutionModeId,
-            None,
-            None,
-            vec![
-                Operand::IdRef(entry),
-                Operand::ExecutionMode(ExecutionMode::FPFastMathDefault),
-                Operand::IdRef(float),
-                Operand::IdRef(flags),
-            ],
-        ));
-    }
-    *module = builder.module();
-    run(module);
-}
-
-pub(super) fn run(module: &mut Module) {
     // Follow value/type dependencies and calls, not just the entry function's
     // result types. This includes floats loaded through pointers and composites.
     let mut edges: HashMap<u32, Vec<u32>> = HashMap::new();
@@ -279,6 +268,9 @@ pub(super) fn run(module: &mut Module) {
             }
         }
     }
+    // A function's signature alone misses types used only in its body. Connect
+    // the function to all its instructions, including stores and calls, so the
+    // traversal below includes every reachable use of floating-point values.
     for function in &module.functions {
         let deps = edges
             .entry(function.def.as_ref().unwrap().result_id.unwrap())
@@ -292,26 +284,24 @@ pub(super) fn run(module: &mut Module) {
             }));
         }
     }
-    let constants: HashMap<_, _> = module
-        .types_global_values
-        .iter()
-        .filter(|inst| matches!(inst.class.opcode, Op::Constant | Op::ConstantNull))
-        .filter_map(|inst| match inst.operands.first() {
-            Some(Operand::LiteralBit32(bits)) => Some((inst.result_id.unwrap(), *bits)),
-            None if inst.class.opcode == Op::ConstantNull => Some((inst.result_id.unwrap(), 0)),
-            _ => None,
-        })
-        .collect();
-    let mut modes = Vec::new();
+    let mut builder = rspirv::dr::Builder::new_from_module(std::mem::take(module));
     let mut capabilities = Vec::new();
-    for mode in &module.execution_modes {
-        if mode.operands.get(1) != Some(&Operand::ExecutionMode(ExecutionMode::FPFastMathDefault)) {
-            modes.push(mode.clone());
-            continue;
-        }
-        let entry = mode.operands[0].unwrap_id_ref();
-        let flags = mode.operands[3].unwrap_id_ref();
-        let fast = constants[&flags] != 0;
+    for (name, model, flags) in policies {
+        // Recover the entry's current ID after SPIR-T has rewritten the module.
+        let entry = builder
+            .module_ref()
+            .entry_points
+            .iter()
+            .find(|entry| {
+                entry.operands[2].unwrap_literal_string() == name
+                    && entry.operands[0] == Operand::ExecutionModel(model)
+            })
+            .unwrap()
+            .operands[1]
+            .unwrap_id_ref();
+        let fast = flags != 0;
+        // Gather one scalar type per reachable float width. BTreeMap keeps the
+        // emitted modes ordered by width regardless of dependency traversal order.
         let mut pending = vec![entry];
         let mut visited = HashSet::new();
         let mut widths = BTreeMap::new();
@@ -326,8 +316,15 @@ pub(super) fn run(module: &mut Module) {
                 pending.extend(deps);
             }
         }
+        if widths.is_empty() {
+            continue;
+        }
+        // FPFastMathDefault references a constant ID. Create it only when there
+        // are final modes to emit, and reuse it for all widths of this entry.
+        let uint = builder.type_int(32, 0);
+        let flags = builder.constant_bit32(uint, flags);
         for (width, ty) in widths {
-            modes.push(Instruction::new(
+            builder.module_mut().execution_modes.push(Instruction::new(
                 Op::ExecutionModeId,
                 None,
                 None,
@@ -338,6 +335,9 @@ pub(super) fn run(module: &mut Module) {
                     Operand::IdRef(flags),
                 ],
             ));
+            // Denormal handling and rounding are entry-point settings, separate
+            // from operation-level fast-math permissions. Both policies use RTE;
+            // rust_math preserves subnormals, while fast_math flushes them.
             let (denorm, capability) = if fast {
                 (
                     ExecutionMode::DenormFlushToZero,
@@ -348,7 +348,7 @@ pub(super) fn run(module: &mut Module) {
             };
             capabilities.extend([capability, Capability::RoundingModeRTE]);
             for execution_mode in [denorm, ExecutionMode::RoundingModeRTE] {
-                modes.push(Instruction::new(
+                builder.module_mut().execution_modes.push(Instruction::new(
                     Op::ExecutionMode,
                     None,
                     None,
@@ -361,7 +361,9 @@ pub(super) fn run(module: &mut Module) {
             }
         }
     }
-    module.execution_modes = modes;
+    *module = builder.module();
+    // Declare the requirements of the modes just emitted without duplicating
+    // declarations already present in the linked module.
     if !capabilities.is_empty()
         && !module
             .extensions
@@ -389,6 +391,8 @@ pub(super) fn run(module: &mut Module) {
     }
 }
 
+/// After splitting and DCE, allow compatibility-only modules to shed requirements
+/// introduced by entry points that are no longer present.
 pub(super) fn remove_unused_capabilities(module: &mut Module) {
     let has_mode = |mode| {
         module
@@ -396,6 +400,8 @@ pub(super) fn remove_unused_capabilities(module: &mut Module) {
             .iter()
             .any(|inst| inst.operands[1] == Operand::ExecutionMode(mode))
     };
+    // Either an entry-point default or an operation override still needs
+    // FloatControls2; checking execution modes alone would miss the latter.
     let controls2 = has_mode(ExecutionMode::FPFastMathDefault)
         || module.annotations.iter().any(|inst| {
             inst.operands.get(1)
