@@ -1,6 +1,6 @@
 use super::id;
 use rspirv::dr::{Function, Instruction, Module, ModuleHeader, Operand};
-use rspirv::spirv::{Op, Word};
+use rspirv::spirv::{Decoration, FPFastMathMode, Op, Word};
 use rustc_data_structures::fx::{FxHashMap, FxHashSet};
 use rustc_middle::bug;
 
@@ -9,6 +9,21 @@ pub fn collect_types(module: &Module) -> FxHashMap<Word, Instruction> {
         .types_global_values
         .iter()
         .filter_map(|inst| Some((inst.result_id?, inst.clone())))
+        .collect()
+}
+
+pub fn collect_fast_math_modes(module: &Module) -> FxHashMap<Word, FPFastMathMode> {
+    module
+        .annotations
+        .iter()
+        .filter_map(|inst| match inst.operands.as_slice() {
+            [
+                Operand::IdRef(id),
+                Operand::Decoration(Decoration::FPFastMathMode),
+                Operand::FPFastMathMode(flags),
+            ] => Some((*id, *flags)),
+            _ => None,
+        })
         .collect()
 }
 
@@ -414,6 +429,8 @@ fn process_instruction(
 pub fn vector_ops(
     header: &mut ModuleHeader,
     types: &FxHashMap<Word, Instruction>,
+    fast_math_modes: &FxHashMap<Word, FPFastMathMode>,
+    annotations: &mut Vec<Instruction>,
     function: &mut Function,
 ) {
     let defs = function
@@ -435,6 +452,37 @@ pub fn vector_ops(
                 &mut block.instructions,
                 &mut instruction_index,
             ) {
+                let components = &block.instructions[instruction_index].operands;
+                if components
+                    .iter()
+                    .any(|op| fast_math_modes.contains_key(&op.unwrap_id_ref()))
+                {
+                    // A vector may only use permissions allowed by every lane.
+                    // Undecorated lanes inherit the entry-point default, which may
+                    // vary for shared helpers. Conservatively grant no permissions
+                    // when mixing them with explicitly decorated lanes. If every
+                    // lane is undecorated, leave the vector inheriting its default.
+                    let flags = components
+                        .iter()
+                        .map(|op| {
+                            fast_math_modes
+                                .get(&op.unwrap_id_ref())
+                                .copied()
+                                .unwrap_or_else(FPFastMathMode::empty)
+                        })
+                        .reduce(|a, b| a & b)
+                        .unwrap();
+                    annotations.push(Instruction::new(
+                        Op::Decorate,
+                        None,
+                        None,
+                        vec![
+                            Operand::IdRef(result.result_id.unwrap()),
+                            Operand::Decoration(Decoration::FPFastMathMode),
+                            Operand::FPFastMathMode(flags),
+                        ],
+                    ));
+                }
                 // Leave all the other instructions in the chain as dead code for other passes
                 // to clean up.
                 block.instructions[instruction_index] = result;

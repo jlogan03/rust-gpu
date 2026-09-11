@@ -1,39 +1,91 @@
                OpCapability Shader
                OpCapability VulkanMemoryModel
                OpCapability FloatControls2
-               OpCapability DenormPreserve
+               OpCapability DenormFlushToZero
                OpCapability RoundingModeRTE
+               OpCapability DenormPreserve
                OpExtension "SPV_KHR_float_controls2"
                OpExtension "SPV_KHR_float_controls"
           %1 = OpExtInstImport "GLSL.std.450"
                OpMemoryModel Logical Vulkan
-               OpEntryPoint GLCompute %2 "main" %data
-               OpExecutionMode %2 LocalSize 1 1 1
-               OpExecutionModeId %2 FPFastMathDefault %f32 %u32_0
-               OpExecutionMode %2 DenormPreserve 32
+               OpEntryPoint Fragment %2 "fast_vectors" %a %b %scale %mixed_result %scaled %ordinary
+               OpEntryPoint GLCompute %9 "main" %data
+               OpEntryPoint Fragment %11 "vectors" %a %b %scale %matching %differing %mixed %mixed_reverse %scaled %ordinary
+               OpExecutionMode %2 OriginUpperLeft
+               OpExecutionMode %9 LocalSize 1 1 1
+               OpExecutionMode %11 OriginUpperLeft
+               OpExecutionModeId %2 FPFastMathDefault %f32 %u32_196620
+               OpExecutionMode %2 DenormFlushToZero 32
                OpExecutionMode %2 RoundingModeRTE 32
+               OpExecutionModeId %9 FPFastMathDefault %f32 %u32_0
+               OpExecutionMode %9 DenormPreserve 32
+               OpExecutionMode %9 RoundingModeRTE 32
+               OpExecutionModeId %11 FPFastMathDefault %f32 %u32_0
+               OpExecutionMode %11 DenormPreserve 32
+               OpExecutionMode %11 RoundingModeRTE 32
+               OpName %a "a"
+               OpName %b "b"
+               OpName %scale "scale"
+               OpName %mixed_result "mixed_result"
+               OpName %scaled "scaled"
+               OpName %ordinary "ordinary"
                OpName %data "data"
-               OpDecorate %9 ArrayStride 4
-               OpDecorate %_struct_10 Block
-               OpMemberDecorate %_struct_10 0 Offset 0
+               OpName %matching "matching"
+               OpName %differing "differing"
+               OpName %mixed "mixed"
+               OpName %mixed_reverse "mixed_reverse"
+               OpName %scaled "scaled"
+               OpName %ordinary "ordinary"
+               OpDecorate %a Location 0
+               OpDecorate %b Location 1
+               OpDecorate %scale Location 2
+               OpDecorate %mixed_result Location 0
+               OpDecorate %scaled Location 1
+               OpDecorate %ordinary Location 2
+               OpDecorate %26 ArrayStride 4
+               OpDecorate %_struct_27 Block
+               OpMemberDecorate %_struct_27 0 Offset 0
                OpDecorate %data Binding 0
                OpDecorate %data DescriptorSet 0
-               OpDecorate %11 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc
-               OpDecorate %12 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc
-               OpDecorate %13 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc
-               OpDecorate %14 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc
-               OpDecorate %15 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc
-               OpDecorate %16 FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
+               OpDecorate %matching Location 0
+               OpDecorate %differing Location 1
+               OpDecorate %mixed Location 2
+               OpDecorate %mixed_reverse Location 3
+               OpDecorate %scaled Location 4
+               OpDecorate %ordinary Location 5
+               OpDecorate %28 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc
+               OpDecorate %29 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc
+               OpDecorate %30 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc
+               OpDecorate %31 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc
+               OpDecorate %32 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc
+               OpDecorate %33 FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
+               OpDecorate %34 FPFastMathMode None
+               OpDecorate %35 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc
+               OpDecorate %36 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc
+               OpDecorate %37 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc
+               OpDecorate %38 FPFastMathMode None
+               OpDecorate %39 FPFastMathMode None
+               OpDecorate %40 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc
         %f32 = OpTypeFloat 32
+      %v4f32 = OpTypeVector %f32 4
+%_ptr_Input_v4f32 = OpTypePointer Input %v4f32
+%_ptr_Input_f32 = OpTypePointer Input %f32
+%_ptr_Output_v4f32 = OpTypePointer Output %v4f32
+       %void = OpTypeVoid
+         %46 = OpTypeFunction %void
+          %a = OpVariable %_ptr_Input_v4f32 Input
+          %b = OpVariable %_ptr_Input_v4f32 Input
+      %scale = OpVariable %_ptr_Input_f32 Input
+%mixed_result = OpVariable %_ptr_Output_v4f32 Output
+     %scaled = OpVariable %_ptr_Output_v4f32 Output
+   %ordinary = OpVariable %_ptr_Output_v4f32 Output
         %u32 = OpTypeInt 32 0
       %u32_8 = OpConstant %u32 8
-          %9 = OpTypeArray %f32 %u32_8
- %_struct_10 = OpTypeStruct %9
-%_ptr_StorageBuffer__struct_10 = OpTypePointer StorageBuffer %_struct_10
-       %void = OpTypeVoid
-         %21 = OpTypeFunction %void
-%_ptr_StorageBuffer_9 = OpTypePointer StorageBuffer %9
-       %data = OpVariable %_ptr_StorageBuffer__struct_10 StorageBuffer
+         %26 = OpTypeArray %f32 %u32_8
+ %_struct_27 = OpTypeStruct %26
+%_ptr_StorageBuffer__struct_27 = OpTypePointer StorageBuffer %_struct_27
+%_ptr_StorageBuffer_26 = OpTypePointer StorageBuffer %26
+       %data = OpVariable %_ptr_StorageBuffer__struct_27 StorageBuffer
       %u32_0 = OpConstant %u32 0
 %_ptr_StorageBuffer_f32 = OpTypePointer StorageBuffer %f32
       %u32_1 = OpConstant %u32 1
@@ -43,39 +95,81 @@
       %u32_5 = OpConstant %u32 5
       %u32_6 = OpConstant %u32 6
       %u32_7 = OpConstant %u32 7
+   %matching = OpVariable %_ptr_Output_v4f32 Output
+  %differing = OpVariable %_ptr_Output_v4f32 Output
+      %mixed = OpVariable %_ptr_Output_v4f32 Output
+%mixed_reverse = OpVariable %_ptr_Output_v4f32 Output
+     %scaled = OpVariable %_ptr_Output_v4f32 Output
+   %ordinary = OpVariable %_ptr_Output_v4f32 Output
+ %u32_196620 = OpConstant %u32 196620
       %u32_0 = OpConstant %u32 0
-          %2 = OpFunction %void None %21
-         %32 = OpLabel
-         %33 = OpInBoundsAccessChain %_ptr_StorageBuffer_9 %data %u32_0
-         %34 = OpInBoundsAccessChain %_ptr_StorageBuffer_f32 %33 %u32_0
-         %35 = OpLoad %f32 %34
-         %36 = OpInBoundsAccessChain %_ptr_StorageBuffer_f32 %33 %u32_1
-         %37 = OpLoad %f32 %36
-         %11 = OpFAdd %f32 %35 %37
-         %38 = OpInBoundsAccessChain %_ptr_StorageBuffer_f32 %33 %u32_0
-               OpStore %38 %11
-         %12 = OpFSub %f32 %35 %37
-         %39 = OpInBoundsAccessChain %_ptr_StorageBuffer_f32 %33 %u32_1
-               OpStore %39 %12
-         %13 = OpFMul %f32 %35 %37
-         %40 = OpInBoundsAccessChain %_ptr_StorageBuffer_f32 %33 %u32_2
-               OpStore %40 %13
-         %14 = OpFDiv %f32 %35 %37
-         %41 = OpInBoundsAccessChain %_ptr_StorageBuffer_f32 %33 %u32_3
-               OpStore %41 %14
-         %15 = OpFRem %f32 %35 %37
-         %42 = OpInBoundsAccessChain %_ptr_StorageBuffer_f32 %33 %u32_4
-               OpStore %42 %15
-         %16 = OpFAdd %f32 %35 %37
-         %43 = OpInBoundsAccessChain %_ptr_StorageBuffer_f32 %33 %u32_5
-               OpStore %43 %16
-         %44 = OpExtInst %f32 %1 50 %35 %37 %35
-         %45 = OpInBoundsAccessChain %_ptr_StorageBuffer_f32 %33 %u32_6
-               OpStore %45 %44
-         %46 = OpFMul %f32 %35 %37
-         %47 = OpInBoundsAccessChain %_ptr_StorageBuffer_f32 %33 %u32_7
-         %48 = OpFAdd %f32 %46 %35
-               OpStore %47 %48
+      %u32_0 = OpConstant %u32 0
+          %2 = OpFunction %void None %46
+         %60 = OpLabel
+         %61 = OpLoad %v4f32 %a
+         %62 = OpLoad %v4f32 %b
+         %63 = OpLoad %f32 %scale
+         %34 = OpFAdd %v4f32 %61 %62
+               OpStore %mixed_result %34
+         %35 = OpVectorTimesScalar %v4f32 %61 %63
+               OpStore %scaled %35
+         %64 = OpFAdd %v4f32 %61 %62
+               OpStore %ordinary %64
+               OpNoLine
+               OpReturn
+               OpFunctionEnd
+          %9 = OpFunction %void None %46
+         %65 = OpLabel
+         %66 = OpInBoundsAccessChain %_ptr_StorageBuffer_26 %data %u32_0
+         %67 = OpInBoundsAccessChain %_ptr_StorageBuffer_f32 %66 %u32_0
+         %68 = OpLoad %f32 %67
+         %69 = OpInBoundsAccessChain %_ptr_StorageBuffer_f32 %66 %u32_1
+         %70 = OpLoad %f32 %69
+         %28 = OpFAdd %f32 %68 %70
+         %71 = OpInBoundsAccessChain %_ptr_StorageBuffer_f32 %66 %u32_0
+               OpStore %71 %28
+         %29 = OpFSub %f32 %68 %70
+         %72 = OpInBoundsAccessChain %_ptr_StorageBuffer_f32 %66 %u32_1
+               OpStore %72 %29
+         %30 = OpFMul %f32 %68 %70
+         %73 = OpInBoundsAccessChain %_ptr_StorageBuffer_f32 %66 %u32_2
+               OpStore %73 %30
+         %31 = OpFDiv %f32 %68 %70
+         %74 = OpInBoundsAccessChain %_ptr_StorageBuffer_f32 %66 %u32_3
+               OpStore %74 %31
+         %32 = OpFRem %f32 %68 %70
+         %75 = OpInBoundsAccessChain %_ptr_StorageBuffer_f32 %66 %u32_4
+               OpStore %75 %32
+         %33 = OpFAdd %f32 %68 %70
+         %76 = OpInBoundsAccessChain %_ptr_StorageBuffer_f32 %66 %u32_5
+               OpStore %76 %33
+         %77 = OpExtInst %f32 %1 50 %68 %70 %68
+         %78 = OpInBoundsAccessChain %_ptr_StorageBuffer_f32 %66 %u32_6
+               OpStore %78 %77
+         %79 = OpFMul %f32 %68 %70
+         %80 = OpInBoundsAccessChain %_ptr_StorageBuffer_f32 %66 %u32_7
+         %81 = OpFAdd %f32 %79 %68
+               OpStore %80 %81
+               OpNoLine
+               OpReturn
+               OpFunctionEnd
+         %11 = OpFunction %void None %46
+         %82 = OpLabel
+         %83 = OpLoad %v4f32 %a
+         %84 = OpLoad %v4f32 %b
+         %85 = OpLoad %f32 %scale
+         %36 = OpFAdd %v4f32 %83 %84
+               OpStore %matching %36
+         %37 = OpFAdd %v4f32 %83 %84
+               OpStore %differing %37
+         %38 = OpFAdd %v4f32 %83 %84
+               OpStore %mixed %38
+         %39 = OpFAdd %v4f32 %83 %84
+               OpStore %mixed_reverse %39
+         %40 = OpVectorTimesScalar %v4f32 %83 %85
+               OpStore %scaled %40
+         %86 = OpFAdd %v4f32 %83 %84
+               OpStore %ordinary %86
                OpNoLine
                OpReturn
                OpFunctionEnd
