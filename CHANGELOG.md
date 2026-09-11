@@ -35,6 +35,9 @@ defaults and reject explicit `rust_math` and `fast_math` annotations. There is n
     * Upstream extension requires changes to WGSL spec
   * WGPU naga does not support float controls even if targeting SPIR-V output
     * Upstream extension is possible but would not cover all output targets
+* Vector operations can only have one set of flags
+  * When scalar operations being combined into a vector operation have different flags, the stricter set is used
+  * This avoids either (1) rejecting vectorization of scalar ops with different flags or (2) producing a less correct from vector ops than scalar
 * These settings do not guarantee that the hardware has properly implemented IEEE-754
 
 ##### Details
