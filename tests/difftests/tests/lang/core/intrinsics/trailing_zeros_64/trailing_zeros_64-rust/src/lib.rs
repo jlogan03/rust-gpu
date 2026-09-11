@@ -24,7 +24,7 @@ pub const TEST_DATA: [u64; 16] = [
     0x4000000000000000,
 ];
 
-#[spirv(compute(threads(1)))]
+#[spirv(compute(threads(1), compat_math))]
 pub fn main_cs(
     #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] input: &[u64],
     #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] output: &mut [u32],

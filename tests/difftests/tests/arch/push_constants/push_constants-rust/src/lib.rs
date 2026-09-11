@@ -13,7 +13,7 @@ pub struct PushConstants {
     count: u32,
 }
 
-#[spirv(compute(threads(64)))]
+#[spirv(compute(threads(64), compat_math))]
 pub fn main_cs(
     #[spirv(push_constant)] push_constants: &PushConstants,
     #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] input: &[f32],
