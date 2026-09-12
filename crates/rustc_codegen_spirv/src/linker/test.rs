@@ -292,11 +292,15 @@ fn split_float_controls_extensions() {
         ));
     }
     let binary = assemble_spirv(&source);
+    let dump_dir =
+        std::env::temp_dir().join(format!("rust-gpu-float-controls-{}", std::process::id()));
+    std::fs::create_dir(&dump_dir).unwrap();
     let result = link_modules_with_linker_opts(
         &[&binary],
         &super::Options {
             module_output_type: crate::codegen_cx::ModuleOutputType::Multiple,
             compact_ids: true,
+            dump_post_split: Some(dump_dir.clone()),
             ..Default::default()
         },
     )
@@ -309,6 +313,23 @@ fn split_float_controls_extensions() {
     };
     assert_eq!(modules.len(), 4);
     for (name, module) in modules.into_values() {
+        let dump = dump_dir.join(format!(".{name}"));
+        for extension in ["spv", "spirt", "spirt.html"] {
+            assert!(
+                !std::fs::read(dump.with_extension(extension))
+                    .unwrap()
+                    .is_empty()
+            );
+        }
+        // The readable dumps omit ID modes; the binary must retain them.
+        let dumped = load(&std::fs::read(dump.with_extension("spv")).unwrap());
+        assert_eq!(
+            dumped
+                .execution_modes
+                .iter()
+                .any(|inst| inst.class.opcode == rspirv::spirv::Op::ExecutionModeId),
+            matches!(name.as_str(), "strict" | "fast")
+        );
         let words = module.assemble();
         validate(&words);
         let has_extension = |name: &str| {
@@ -331,6 +352,7 @@ fn split_float_controls_extensions() {
                 .expect("compatibility output must be accepted by Naga");
         }
     }
+    std::fs::remove_dir_all(dump_dir).unwrap();
 }
 
 #[test]
