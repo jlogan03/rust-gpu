@@ -1,0 +1,64 @@
+               OpCapability Shader
+               OpCapability VulkanMemoryModel
+               OpMemoryModel Logical Vulkan
+               OpEntryPoint GLCompute %1 "legacy" %data
+               OpEntryPoint GLCompute %3 "integer" %data
+               OpExecutionMode %1 LocalSize 1 1 1
+               OpExecutionMode %3 LocalSize 1 1 1
+               OpName %data "data"
+               OpName %data "data"
+               OpDecorate %7 ArrayStride 4
+               OpDecorate %_struct_8 Block
+               OpMemberDecorate %_struct_8 0 Offset 0
+               OpDecorate %data Binding 0
+               OpDecorate %data DescriptorSet 0
+               OpDecorate %_struct_9 Block
+               OpMemberDecorate %_struct_9 0 Offset 0
+               OpDecorate %data Binding 0
+               OpDecorate %data DescriptorSet 0
+        %f32 = OpTypeFloat 32
+        %u32 = OpTypeInt 32 0
+      %u32_2 = OpConstant %u32 2
+          %7 = OpTypeArray %f32 %u32_2
+  %_struct_8 = OpTypeStruct %7
+%_ptr_StorageBuffer__struct_8 = OpTypePointer StorageBuffer %_struct_8
+       %void = OpTypeVoid
+         %15 = OpTypeFunction %void
+%_ptr_StorageBuffer_7 = OpTypePointer StorageBuffer %7
+       %data = OpVariable %_ptr_StorageBuffer__struct_8 StorageBuffer
+      %u32_0 = OpConstant %u32 0
+%_ptr_StorageBuffer_f32 = OpTypePointer StorageBuffer %f32
+      %u32_1 = OpConstant %u32 1
+  %_struct_9 = OpTypeStruct %u32
+%_ptr_StorageBuffer__struct_9 = OpTypePointer StorageBuffer %_struct_9
+%_ptr_StorageBuffer_u32 = OpTypePointer StorageBuffer %u32
+       %data = OpVariable %_ptr_StorageBuffer__struct_9 StorageBuffer
+          %1 = OpFunction %void None %15
+         %22 = OpLabel
+         %23 = OpInBoundsAccessChain %_ptr_StorageBuffer_7 %data %u32_0
+         %24 = OpInBoundsAccessChain %_ptr_StorageBuffer_f32 %23 %u32_0
+         %25 = OpLoad %f32 %24
+         %26 = OpInBoundsAccessChain %_ptr_StorageBuffer_f32 %23 %u32_1
+         %27 = OpLoad %f32 %26
+         %28 = OpFAdd %f32 %25 %27
+         %29 = OpInBoundsAccessChain %_ptr_StorageBuffer_f32 %23 %u32_0
+               OpStore %29 %28
+         %30 = OpInBoundsAccessChain %_ptr_StorageBuffer_f32 %23 %u32_0
+         %31 = OpLoad %f32 %30
+         %32 = OpInBoundsAccessChain %_ptr_StorageBuffer_f32 %23 %u32_1
+         %33 = OpLoad %f32 %32
+         %34 = OpFMul %f32 %31 %33
+         %35 = OpInBoundsAccessChain %_ptr_StorageBuffer_f32 %23 %u32_1
+               OpStore %35 %34
+               OpNoLine
+               OpReturn
+               OpFunctionEnd
+          %3 = OpFunction %void None %15
+         %36 = OpLabel
+         %37 = OpInBoundsAccessChain %_ptr_StorageBuffer_u32 %data %u32_0
+         %38 = OpLoad %u32 %37
+         %39 = OpIAdd %u32 %38 %u32_1
+               OpStore %37 %39
+               OpNoLine
+               OpReturn
+               OpFunctionEnd

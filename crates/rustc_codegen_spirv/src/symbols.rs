@@ -263,7 +263,7 @@ const EXECUTION_MODES: &[(&str, ExecutionMode, ExecutionModeExtraDim)] = {
         ("local_size_id_z", LocalSizeId, Z),
         ("local_size_hint_id", LocalSizeHintId, Value),
         ("post_depth_coverage", PostDepthCoverage, None),
-        ("denorm_preserve", DenormPreserve, None),
+        ("denorm_preserve", DenormPreserve, Value),
         ("denorm_flush_to_zero", DenormFlushToZero, Value),
         (
             "signed_zero_inf_nan_preserve",

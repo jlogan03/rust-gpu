@@ -1,0 +1,52 @@
+               OpCapability Shader
+               OpCapability VulkanMemoryModel
+               OpCapability FloatControls2
+               OpCapability DenormFlushToZero
+               OpCapability RoundingModeRTE
+               OpCapability DenormPreserve
+               OpExtension "SPV_KHR_float_controls2"
+               OpExtension "SPV_KHR_float_controls"
+               OpMemoryModel Logical Vulkan
+               OpEntryPoint Fragment %1 "fast" %input %output
+               OpEntryPoint Fragment %4 "strict" %input %output
+               OpExecutionMode %1 OriginUpperLeft
+               OpExecutionMode %4 OriginUpperLeft
+               OpExecutionModeId %1 FPFastMathDefault %f32 %u32_196620
+               OpExecutionMode %1 DenormFlushToZero 32
+               OpExecutionMode %1 RoundingModeRTE 32
+               OpExecutionModeId %4 FPFastMathDefault %f32 %u32_0
+               OpExecutionMode %4 DenormPreserve 32
+               OpExecutionMode %4 RoundingModeRTE 32
+               OpName %input "input"
+               OpName %output "output"
+               OpDecorate %input Location 0
+               OpDecorate %output Location 0
+        %f32 = OpTypeFloat 32
+%_ptr_Input_f32 = OpTypePointer Input %f32
+%_ptr_Output_f32 = OpTypePointer Output %f32
+       %void = OpTypeVoid
+         %12 = OpTypeFunction %void
+      %input = OpVariable %_ptr_Input_f32 Input
+      %f32_1 = OpConstant %f32 1
+     %output = OpVariable %_ptr_Output_f32 Output
+        %u32 = OpTypeInt 32 0
+ %u32_196620 = OpConstant %u32 196620
+      %u32_0 = OpConstant %u32 0
+          %1 = OpFunction %void None %12
+         %15 = OpLabel
+         %16 = OpLoad %f32 %input
+         %17 = OpFAdd %f32 %16 %f32_1
+         %18 = OpFSub %f32 %17 %16
+               OpStore %output %18
+               OpNoLine
+               OpReturn
+               OpFunctionEnd
+          %4 = OpFunction %void None %12
+         %19 = OpLabel
+         %20 = OpLoad %f32 %input
+         %21 = OpFAdd %f32 %20 %f32_1
+         %22 = OpFSub %f32 %21 %20
+               OpStore %output %22
+               OpNoLine
+               OpReturn
+               OpFunctionEnd

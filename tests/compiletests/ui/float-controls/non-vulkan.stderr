@@ -1,0 +1,14 @@
+error: `rust_math` and `fast_math` require a Vulkan target
+  --> $DIR/non-vulkan.rs:7:8
+   |
+LL | pub fn main() {}
+   |        ^^^^
+
+error: `rust_math` and `fast_math` require a Vulkan target
+  --> $DIR/non-vulkan.rs:10:8
+   |
+LL | pub fn strict() {}
+   |        ^^^^^^
+
+error: aborting due to 2 previous errors
+

@@ -3,13 +3,13 @@ use crate::maybe_pqp_cg_ssa as rustc_codegen_ssa;
 
 use super::CodegenCx;
 use crate::abi::ConvSpirvType;
-use crate::attr::{AggregatedSpirvAttributes, Entry, Spanned, SpecConstant};
+use crate::attr::{AggregatedSpirvAttributes, Entry, MathMode, Spanned, SpecConstant};
 use crate::builder::Builder;
 use crate::builder_spirv::{SpirvFunctionCursor, SpirvValue, SpirvValueExt};
 use crate::spirv_type::SpirvType;
 use rspirv::dr::Operand;
 use rspirv::spirv::{
-    BuiltIn, Decoration, Dim, ExecutionModel, FunctionControl, StorageClass, Word,
+    BuiltIn, Decoration, Dim, ExecutionMode, ExecutionModel, FunctionControl, StorageClass, Word,
 };
 use rustc_abi::FieldsShape;
 use rustc_codegen_ssa::traits::{BaseTypeCodegenMethods, BuilderMethods, MiscCodegenMethods as _};
@@ -131,13 +131,85 @@ impl<'tcx> CodegenCx<'tcx> {
             name,
             entry.execution_model,
         );
+        // Only explicit Vulkan policies configure the floating-point environment.
+        // Compatibility mode and unannotated entries retain the target defaults.
+        if matches!(entry.math_mode, Some(MathMode::Rust | MathMode::Fast))
+            && self
+                .tcx
+                .sess
+                .target
+                .options
+                .env
+                .desc()
+                .starts_with("vulkan")
+        {
+            let fast = matches!(entry.math_mode, Some(MathMode::Fast));
+            let policy = if fast { "`fast_math`" } else { "`rust_math`" };
+            // Policies apply to every float width, so an explicit setting must
+            // agree regardless of its width. The two legacy preservation modes
+            // cannot coexist with FPFastMathDefault even when its flags agree.
+            for mode in &entry.execution_modes {
+                let conflict = match mode.value.0 {
+                    ExecutionMode::SignedZeroInfNanPreserve => Some("signed_zero_inf_nan_preserve"),
+                    ExecutionMode::ContractionOff => Some("contraction_off"),
+                    ExecutionMode::RoundingModeRTZ => Some("rounding_mode_rtz"),
+                    ExecutionMode::DenormFlushToZero if !fast => Some("denorm_flush_to_zero"),
+                    ExecutionMode::DenormPreserve if fast => Some("denorm_preserve"),
+                    _ => None,
+                };
+                if let Some(attribute) = conflict {
+                    let mut err = self.tcx.dcx().struct_span_err(
+                        mode.span,
+                        format!("`{attribute}` conflicts with {policy}"),
+                    );
+                    err.help(
+                        "use `compat_math` to configure floating-point execution modes manually",
+                    );
+                    err.emit();
+                }
+            }
+            // Seed the policy with f32. The linker expands it to the floating-point
+            // widths reachable from this entry point once imports are resolved.
+            let float = SpirvType::Float(32).def(span, self);
+            // fast_math grants the safe algebraic permissions, without assuming
+            // finite inputs. An explicit zero mask disables those permissions.
+            let flags = if fast {
+                crate::attr::ALGEBRAIC_MATH_FLAGS
+            } else {
+                0
+            };
+            let flags =
+                rustc_codegen_ssa::traits::ConstCodegenMethods::const_u32(self, flags).def_cx(self);
+            let mut emit = self.emit_global();
+            emit.extension("SPV_KHR_float_controls2");
+            emit.capability(rspirv::spirv::Capability::FloatControls2);
+            // rspirv's execution_mode_id helper incorrectly uses literal operands.
+            emit.module_mut()
+                .execution_modes
+                .push(rspirv::dr::Instruction::new(
+                    rspirv::spirv::Op::ExecutionModeId,
+                    None,
+                    None,
+                    vec![
+                        Operand::IdRef(stub.id),
+                        Operand::ExecutionMode(rspirv::spirv::ExecutionMode::FPFastMathDefault),
+                        Operand::IdRef(float),
+                        Operand::IdRef(flags),
+                    ],
+                ));
+        } else if matches!(
+            entry.math_mode,
+            Some(crate::attr::MathMode::Rust | crate::attr::MathMode::Fast)
+        ) {
+            self.tcx
+                .dcx()
+                .span_err(span, "`rust_math` and `fast_math` require a Vulkan target");
+        }
         let mut emit = self.emit_global();
-        entry
-            .execution_modes
-            .iter()
-            .for_each(|(execution_mode, execution_mode_extra)| {
-                emit.execution_mode(stub.id, *execution_mode, execution_mode_extra);
-            });
+        entry.execution_modes.iter().for_each(|mode| {
+            let (execution_mode, execution_mode_extra) = &mode.value;
+            emit.execution_mode(stub.id, *execution_mode, execution_mode_extra);
+        });
     }
 
     fn shader_entry_stub(
