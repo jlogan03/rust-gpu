@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Toolchain: `nightly-2026-08-15` (rustc 1.99.0)
 
+### Changed 🛠
+
+- Add opt-in Vulkan `rust_math` and `fast_math` floating-point policies, with `compat_math` preserving existing behavior. See [floating-point policy attributes](docs/src/attributes.md#floating-point-policy-vulkan).
+
 ### Fixed 🩹
 
 - [PR#678](https://github.com/Rust-GPU/rust-gpu/pull/678) fix missing reexports in `spirv-std-nightly`

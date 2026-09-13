@@ -5,6 +5,7 @@ pub(crate) mod dce;
 mod destructure_composites;
 mod duplicates;
 mod entry_interface;
+mod float_controls;
 mod import_export_link;
 mod inline;
 mod ipo;
@@ -319,6 +320,8 @@ pub fn link(
         let _timer = sess.timer("link_find_pairs");
         import_export_link::run(opts, sess, &mut output)?;
     }
+
+    let float_policies = float_controls::take_policies(&mut output);
 
     {
         let _timer = sess.timer("link_dce-post-link");
@@ -635,6 +638,8 @@ pub fn link(
         };
     }
 
+    float_controls::restore_policies(&mut output, float_policies);
+
     // Ensure that no references remain, to our custom "extended instruction set".
     for inst in &output.ext_inst_imports {
         assert_eq!(inst.class.opcode, Op::ExtInstImport);
@@ -757,6 +762,7 @@ pub fn link(
         {
             let _timer = sess.timer("link_dce-post-split");
             dce::dce(output);
+            float_controls::remove_unused_capabilities(output);
         }
 
         // HACK(eddyb) this has to be after DCE, to not break SPIR-T w/ dead decorations.

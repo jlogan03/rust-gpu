@@ -70,6 +70,16 @@ fn link_with_linker_opts(
     binaries: &[&[u8]],
     opts: &crate::linker::Options,
 ) -> Result<Module, PrettyString> {
+    link_modules_with_linker_opts(binaries, opts).map(|res| match res {
+        LinkResult::SingleModule(m) => *m,
+        LinkResult::MultipleModules { .. } => unreachable!(),
+    })
+}
+
+fn link_modules_with_linker_opts(
+    binaries: &[&[u8]],
+    opts: &crate::linker::Options,
+) -> Result<LinkResult, PrettyString> {
     let modules = binaries.iter().cloned().map(load).collect::<Vec<_>>();
 
     // A threadsafe buffer for writing.
@@ -181,11 +191,7 @@ fn link_with_linker_opts(
                 Default::default(),
             );
             assert_eq!(sess.dcx().has_errors(), res.as_ref().err().copied());
-            res.map(|res| match res {
-                LinkResult::SingleModule(m) => *m,
-                LinkResult::MultipleModules { .. } => unreachable!(),
-            })
-            .map_err(|_guar| ())
+            res.map_err(|_guar| ())
         })
     })
     .map_err(|_fatal| ())
@@ -237,6 +243,118 @@ fn without_header_eq(output: Module, expected: &str) {
             pretty_assertions::Comparison::new(&PrettyString(expected), &PrettyString(result))
         );
     }
+}
+
+#[test]
+fn split_float_controls_extensions() {
+    use rspirv::binary::Assemble;
+
+    // Splitting must retain each entry's required extensions while making the
+    // compatibility output acceptable to Naga.
+    let mut source = r#"
+        OpCapability Shader
+        OpCapability FloatControls2
+        OpCapability RoundingModeRTZ
+        OpCapability SignedZeroInfNanPreserve
+        OpExtension "SPV_KHR_float_controls"
+        OpExtension "SPV_KHR_float_controls2"
+        OpMemoryModel Logical GLSL450
+        OpEntryPoint Fragment %strict "strict" %output
+        OpEntryPoint Fragment %fast "fast" %output
+        OpEntryPoint Fragment %compat "compat" %output
+        OpEntryPoint Fragment %legacy "legacy" %output
+        OpExecutionMode %strict OriginUpperLeft
+        OpExecutionMode %fast OriginUpperLeft
+        OpExecutionMode %compat OriginUpperLeft
+        OpExecutionMode %legacy OriginUpperLeft
+        OpExecutionModeId %strict FPFastMathDefault %float %zero
+        OpExecutionModeId %fast FPFastMathDefault %float %algebraic
+        OpExecutionMode %legacy RoundingModeRTZ 32
+        OpExecutionMode %legacy SignedZeroInfNanPreserve 32
+        OpDecorate %output Location 0
+        %void = OpTypeVoid
+        %fn = OpTypeFunction %void
+        %float = OpTypeFloat 32
+        %uint = OpTypeInt 32 0
+        %zero = OpConstant %uint 0
+        %algebraic = OpConstant %uint 196620
+        %one = OpConstant %float 1
+        %ptr_float = OpTypePointer Output %float
+        %output = OpVariable %ptr_float Output
+    "#
+    .to_string();
+    for name in ["strict", "fast", "compat", "legacy"] {
+        source.push_str(&format!(
+            "%{name} = OpFunction %void None %fn\n\
+             %{name}_label = OpLabel\n\
+             OpStore %output %one\n\
+             OpReturn\nOpFunctionEnd\n"
+        ));
+    }
+    let binary = assemble_spirv(&source);
+    let dump_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../target")
+        .join(format!("rust-gpu-float-controls-{}", std::process::id()));
+    std::fs::create_dir_all(dump_dir.parent().unwrap()).unwrap();
+    std::fs::create_dir(&dump_dir).unwrap();
+    let result = link_modules_with_linker_opts(
+        &[&binary],
+        &super::Options {
+            module_output_type: crate::codegen_cx::ModuleOutputType::Multiple,
+            compact_ids: true,
+            dump_post_split: Some(dump_dir.clone()),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let LinkResult::MultipleModules {
+        file_stem_to_entry_name_and_module: modules,
+    } = result
+    else {
+        panic!("expected split modules");
+    };
+    assert_eq!(modules.len(), 4);
+    for (name, module) in modules.into_values() {
+        let dump = dump_dir.join(format!(".{name}"));
+        for extension in ["spv", "spirt", "spirt.html"] {
+            assert!(
+                !std::fs::read(dump.with_extension(extension))
+                    .unwrap()
+                    .is_empty()
+            );
+        }
+        // The readable dumps omit ID modes; the binary must retain them.
+        let dumped = load(&std::fs::read(dump.with_extension("spv")).unwrap());
+        assert_eq!(
+            dumped
+                .execution_modes
+                .iter()
+                .any(|inst| inst.class.opcode == rspirv::spirv::Op::ExecutionModeId),
+            matches!(name.as_str(), "strict" | "fast")
+        );
+        let words = module.assemble();
+        validate(&words);
+        let has_extension = |name: &str| {
+            module
+                .extensions
+                .iter()
+                .any(|inst| inst.operands[0].unwrap_literal_string() == name)
+        };
+        assert_eq!(has_extension("SPV_KHR_float_controls"), name != "compat");
+        assert_eq!(
+            has_extension("SPV_KHR_float_controls2"),
+            matches!(name.as_str(), "strict" | "fast")
+        );
+        if name == "compat" {
+            // SPIR-V validation alone accepts unused extensions. Exercise the
+            // consumer that rejects these declarations even when unused.
+            #[cfg(feature = "naga")]
+            naga::front::spv::Frontend::new(words.into_iter(), &Default::default())
+                .parse()
+                .expect("compatibility output must be accepted by Naga");
+        }
+    }
+    std::fs::remove_dir_all(dump_dir).unwrap();
 }
 
 #[test]

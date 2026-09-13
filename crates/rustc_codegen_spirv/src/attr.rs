@@ -17,6 +17,12 @@ use rustc_span::{Ident, Span, Symbol};
 use smallvec::SmallVec;
 use std::rc::Rc;
 
+// Match rustc's LLVMRustSetAlgebraicMath: notably, no NotNaN/NotInf assumptions.
+pub(crate) const ALGEBRAIC_MATH_FLAGS: u32 = rspirv::spirv::FPFastMathMode::ALLOW_REASSOC.bits()
+    | rspirv::spirv::FPFastMathMode::ALLOW_CONTRACT.bits()
+    | rspirv::spirv::FPFastMathMode::ALLOW_RECIP.bits()
+    | rspirv::spirv::FPFastMathMode::NSZ.bits();
+
 // FIXME(eddyb) replace with `ArrayVec<[Word; 3]>`.
 #[derive(Copy, Clone, Debug)]
 pub struct ExecutionModeExtra {
@@ -42,19 +48,28 @@ impl AsRef<[u32]> for ExecutionModeExtra {
 
 #[derive(Clone, Debug)]
 pub struct Entry {
+    pub math_mode: Option<MathMode>,
     pub execution_model: ExecutionModel,
-    pub execution_modes: Vec<(ExecutionMode, ExecutionModeExtra)>,
+    pub execution_modes: Vec<Spanned<(ExecutionMode, ExecutionModeExtra)>>,
     pub name: Option<Symbol>,
 }
 
 impl From<ExecutionModel> for Entry {
     fn from(execution_model: ExecutionModel) -> Self {
         Self {
+            math_mode: None,
             execution_model,
             execution_modes: Vec::new(),
             name: None,
         }
     }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum MathMode {
+    Compat,
+    Rust,
+    Fast,
 }
 
 /// `struct` types that are used to represent special SPIR-V types.
@@ -109,7 +124,7 @@ pub enum SpirvAttribute {
 
 // HACK(eddyb) this is similar to `rustc_span::Spanned` but with `value` as the
 // field name instead of `node` (which feels inadequate in this context).
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Spanned<T> {
     pub value: T,
     pub span: Span,
@@ -769,7 +784,23 @@ fn parse_entry_attrs(
     if let Some(attrs) = arg.meta_item_list() {
         for attr in attrs {
             if let Some(attr_name) = attr.ident() {
-                if let Some((execution_mode, extra_dim)) = sym.execution_modes.get(&attr_name.name)
+                if matches!(
+                    attr_name.name.as_str(),
+                    "compat_math" | "rust_math" | "fast_math"
+                ) {
+                    if !attr.is_word() || entry.math_mode.is_some() {
+                        return Err((
+                            attr.span(),
+                            "specify only one of `compat_math`, `rust_math` or `fast_math`, once and without arguments".into(),
+                        ));
+                    }
+                    entry.math_mode = Some(match attr_name.name.as_str() {
+                        "compat_math" => MathMode::Compat,
+                        "rust_math" => MathMode::Rust,
+                        _ => MathMode::Fast,
+                    });
+                } else if let Some((execution_mode, extra_dim)) =
+                    sym.execution_modes.get(&attr_name.name)
                 {
                     use crate::symbols::ExecutionModeExtraDim::*;
                     let val = match extra_dim {
@@ -833,15 +864,11 @@ fn parse_entry_attrs(
                             }
                         },*/
                         _ => {
-                            if let Some(val) = val {
-                                entry
-                                    .execution_modes
-                                    .push((*execution_mode, ExecutionModeExtra::new([val])));
-                            } else {
-                                entry
-                                    .execution_modes
-                                    .push((*execution_mode, ExecutionModeExtra::new([])));
-                            }
+                            let extra = ExecutionModeExtra::new(val.as_slice());
+                            entry.execution_modes.push(Spanned {
+                                value: (*execution_mode, extra),
+                                span: attr.span(),
+                            });
                         }
                     }
                 } else if attr_name.name == sym.entry_point_name {
@@ -875,15 +902,17 @@ fn parse_entry_attrs(
     match entry.execution_model {
         Fragment => {
             let origin_mode = origin_mode.unwrap_or(OriginUpperLeft);
-            entry
-                .execution_modes
-                .push((origin_mode, ExecutionModeExtra::new([])));
+            entry.execution_modes.push(Spanned {
+                value: (origin_mode, ExecutionModeExtra::new([])),
+                span: arg.span(),
+            });
         }
         GLCompute | MeshNV | TaskNV | TaskEXT | MeshEXT => {
             if let Some(local_size) = local_size {
-                entry
-                    .execution_modes
-                    .push((LocalSize, ExecutionModeExtra::new(local_size)));
+                entry.execution_modes.push(Spanned {
+                    value: (LocalSize, ExecutionModeExtra::new(local_size)),
+                    span: arg.span(),
+                });
             } else {
                 return Err((
                     arg.span(),
