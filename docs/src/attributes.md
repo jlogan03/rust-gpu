@@ -72,7 +72,13 @@ pub fn fast_fragment() {}
 
 The three annotations are mutually exclusive and take no arguments.
 Each policy applies to one entry point and its callees.
-Algebraic and unsafe fast intrinsics retain their existing lowering.
+
+Under `rust_math` and `fast_math`, `algebraic_*` operations permit reassociation,
+contraction, reciprocal transformations, and treating positive and negative zero as equivalent.
+These operations use the entry point's subnormal and rounding modes.
+`compat_math` retains the existing lowering of algebraic and unsafe `*_fast` intrinsics.
+The linker copies shared helpers when these policies require different intrinsic permissions.
+
 Neither `rust_math` nor `fast_math` assumes that inputs exclude NaN or infinity.
 Explicit `mul_add` calls perform fused operations under both policies.
 

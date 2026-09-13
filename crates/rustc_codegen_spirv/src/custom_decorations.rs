@@ -121,6 +121,19 @@ impl<'a> CustomDecoration<'a> for ZombieDecoration<'a> {
     }
 }
 
+pub struct MathFlagsDecoration(pub u32);
+
+impl<'a> CustomDecoration<'a> for MathFlagsDecoration {
+    const ENCODING_PREFIX: &'static str = "M";
+
+    fn encode(self, w: &mut impl fmt::Write) -> fmt::Result {
+        write!(w, "{}", self.0)
+    }
+    fn decode(s: &'a str) -> Self {
+        Self(s.parse().unwrap())
+    }
+}
+
 /// Equivalent of `CustomInst::SetDebugSrcLoc` (see `crate::custom_insts`),
 /// for global definitions (i.e. outside functions), where limitations of
 /// `rspirv`/`spirt` prevent us from using anything other than decorations.
