@@ -1,0 +1,57 @@
+               OpCapability Shader
+               OpCapability Float16
+               OpCapability Float64
+               OpCapability StorageBuffer16BitAccess
+               OpCapability DenormPreserve
+               OpCapability DenormFlushToZero
+               OpCapability RoundingModeRTE
+               OpCapability VulkanMemoryModel
+               OpCapability FloatControls2
+               OpExtension "SPV_KHR_float_controls2"
+               OpExtension "SPV_KHR_float_controls"
+               OpMemoryModel Logical Vulkan
+               OpEntryPoint GLCompute %1 "fast_double" %data
+               OpEntryPoint GLCompute %3 "mixed" %half %double
+               OpExecutionMode %1 LocalSize 1 1 1
+               OpExecutionMode %1 DenormFlushToZero 64
+               OpExecutionMode %1 RoundingModeRTE 64
+               OpExecutionMode %3 LocalSize 1 1 1
+               OpExecutionMode %3 DenormPreserve 16
+               OpExecutionMode %3 RoundingModeRTE 16
+               OpExecutionModeId %1 FPFastMathDefault %f64 %u32_196620
+               OpExecutionModeId %3 FPFastMathDefault %f16 %u32_0
+               OpExecutionModeId %3 FPFastMathDefault %f64 %u32_0
+               OpExecutionMode %3 DenormPreserve 64
+               OpExecutionMode %3 RoundingModeRTE 64
+               OpName %data "data"
+               OpName %half "half"
+               OpName %double "double"
+               OpDecorate %_struct_11 Block
+               OpMemberDecorate %_struct_11 0 Offset 0
+               OpDecorate %data Binding 0
+               OpDecorate %data DescriptorSet 0
+               OpDecorate %_struct_12 Block
+               OpMemberDecorate %_struct_12 0 Offset 0
+               OpDecorate %half Binding 0
+               OpDecorate %half DescriptorSet 0
+               OpDecorate %double Binding 1
+               OpDecorate %double DescriptorSet 0
+        %f64 = OpTypeFloat 64
+ %_struct_11 = OpTypeStruct %f64
+%_ptr_StorageBuffer__struct_11 = OpTypePointer StorageBuffer %_struct_11
+       %void = OpTypeVoid
+         %15 = OpTypeFunction %void
+%_ptr_StorageBuffer_f64 = OpTypePointer StorageBuffer %f64
+       %data = OpVariable %_ptr_StorageBuffer__struct_11 StorageBuffer
+        %u32 = OpTypeInt 32 0
+      %u32_0 = OpConstant %u32 0
+      %f64_1 = OpConstant %f64 1
+        %f16 = OpTypeFloat 16
+ %_struct_12 = OpTypeStruct %f16
+%_ptr_StorageBuffer__struct_12 = OpTypePointer StorageBuffer %_struct_12
+%_ptr_StorageBuffer_f16 = OpTypePointer StorageBuffer %f16
+       %half = OpVariable %_ptr_StorageBuffer__struct_12 StorageBuffer
+     %double = OpVariable %_ptr_StorageBuffer__struct_11 StorageBuffer
+%f16_0_000000000000000000000000000000000000000021524 = OpConstant %f16 0.000000000000000000000000000000000000000021524
+ %u32_196620 = OpConstant %u32 196620
+      %u32_0 = OpConstant %u32 0

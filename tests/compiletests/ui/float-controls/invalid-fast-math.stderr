@@ -1,0 +1,62 @@
+error: specify only one of `compat_math`, `rust_math` or `fast_math`, once and without arguments
+  --> $DIR/invalid-fast-math.rs:5:40
+   |
+LL | #[spirv(compute(threads(1), fast_math, fast_math))]
+   |                                        ^^^^^^^^^
+
+error: specify only one of `compat_math`, `rust_math` or `fast_math`, once and without arguments
+  --> $DIR/invalid-fast-math.rs:8:18
+   |
+LL | #[spirv(fragment(fast_math = true))]
+   |                  ^^^^^^^^^^^^^^^^
+
+error: specify only one of `compat_math`, `rust_math` or `fast_math`, once and without arguments
+  --> $DIR/invalid-fast-math.rs:11:18
+   |
+LL | #[spirv(fragment(fast_math()))]
+   |                  ^^^^^^^^^^^
+
+error: specify only one of `compat_math`, `rust_math` or `fast_math`, once and without arguments
+  --> $DIR/invalid-fast-math.rs:14:40
+   |
+LL | #[spirv(compute(threads(1), rust_math, fast_math))]
+   |                                        ^^^^^^^^^
+
+error: specify only one of `compat_math`, `rust_math` or `fast_math`, once and without arguments
+  --> $DIR/invalid-fast-math.rs:17:29
+   |
+LL | #[spirv(fragment(rust_math, rust_math))]
+   |                             ^^^^^^^^^
+
+error: specify only one of `compat_math`, `rust_math` or `fast_math`, once and without arguments
+  --> $DIR/invalid-fast-math.rs:20:18
+   |
+LL | #[spirv(fragment(rust_math = true))]
+   |                  ^^^^^^^^^^^^^^^^
+
+error: specify only one of `compat_math`, `rust_math` or `fast_math`, once and without arguments
+  --> $DIR/invalid-fast-math.rs:23:31
+   |
+LL | #[spirv(fragment(compat_math, rust_math))]
+   |                               ^^^^^^^^^
+
+error: specify only one of `compat_math`, `rust_math` or `fast_math`, once and without arguments
+  --> $DIR/invalid-fast-math.rs:26:29
+   |
+LL | #[spirv(fragment(fast_math, compat_math))]
+   |                             ^^^^^^^^^^^
+
+error: specify only one of `compat_math`, `rust_math` or `fast_math`, once and without arguments
+  --> $DIR/invalid-fast-math.rs:29:31
+   |
+LL | #[spirv(fragment(compat_math, compat_math))]
+   |                               ^^^^^^^^^^^
+
+error: specify only one of `compat_math`, `rust_math` or `fast_math`, once and without arguments
+  --> $DIR/invalid-fast-math.rs:32:18
+   |
+LL | #[spirv(fragment(compat_math()))]
+   |                  ^^^^^^^^^^^^^
+
+error: aborting due to 10 previous errors
+
