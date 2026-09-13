@@ -1,0 +1,112 @@
+               OpCapability Shader
+               OpCapability VulkanMemoryModel
+               OpCapability FloatControls2
+               OpCapability DenormPreserve
+               OpCapability RoundingModeRTE
+               OpCapability DenormFlushToZero
+               OpExtension "SPV_KHR_float_controls2"
+               OpExtension "SPV_KHR_float_controls"
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical Vulkan
+               OpEntryPoint Fragment %2 "scalar" %a %b %output
+               OpEntryPoint Fragment %6 "vectors" %a %b %matching %differing %mixed %mixed_reverse %scaled %ordinary
+               OpExecutionMode %2 OriginUpperLeft
+               OpExecutionMode %6 OriginUpperLeft
+               OpExecutionModeId %2 FPFastMathDefault %f32 %u32_0
+               OpExecutionMode %2 DenormPreserve 32
+               OpExecutionMode %2 RoundingModeRTE 32
+               OpExecutionModeId %6 FPFastMathDefault %f32 %u32_196620
+               OpExecutionMode %6 DenormFlushToZero 32
+               OpExecutionMode %6 RoundingModeRTE 32
+               OpName %a "a"
+               OpName %b "b"
+               OpName %output "output"
+               OpName %a "a"
+               OpName %b "b"
+               OpName %matching "matching"
+               OpName %differing "differing"
+               OpName %mixed "mixed"
+               OpName %mixed_reverse "mixed_reverse"
+               OpName %scaled "scaled"
+               OpName %ordinary "ordinary"
+               OpDecorate %a Location 0
+               OpDecorate %b Location 1
+               OpDecorate %output Location 0
+               OpDecorate %a Location 0
+               OpDecorate %b Location 1
+               OpDecorate %matching Location 0
+               OpDecorate %differing Location 1
+               OpDecorate %mixed Location 2
+               OpDecorate %mixed_reverse Location 3
+               OpDecorate %scaled Location 4
+               OpDecorate %ordinary Location 5
+               OpDecorate %22 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc
+               OpDecorate %23 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc
+               OpDecorate %24 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc
+               OpDecorate %25 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc
+               OpDecorate %26 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc
+               OpDecorate %27 FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
+               OpDecorate %28 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc
+               OpDecorate %29 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc
+               OpDecorate %30 FPFastMathMode None
+               OpDecorate %31 FPFastMathMode None
+               OpDecorate %32 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc
+        %f32 = OpTypeFloat 32
+%_ptr_Input_f32 = OpTypePointer Input %f32
+%_ptr_Output_f32 = OpTypePointer Output %f32
+       %void = OpTypeVoid
+         %36 = OpTypeFunction %void
+        %u32 = OpTypeInt 32 0
+      %u32_0 = OpConstant %u32 0
+          %a = OpVariable %_ptr_Input_f32 Input
+          %b = OpVariable %_ptr_Input_f32 Input
+     %output = OpVariable %_ptr_Output_f32 Output
+      %v4f32 = OpTypeVector %f32 4
+%_ptr_Input_v4f32 = OpTypePointer Input %v4f32
+%_ptr_Output_v4f32 = OpTypePointer Output %v4f32
+ %u32_196620 = OpConstant %u32 196620
+          %a = OpVariable %_ptr_Input_v4f32 Input
+          %b = OpVariable %_ptr_Input_v4f32 Input
+   %matching = OpVariable %_ptr_Output_v4f32 Output
+  %differing = OpVariable %_ptr_Output_v4f32 Output
+      %mixed = OpVariable %_ptr_Output_v4f32 Output
+%mixed_reverse = OpVariable %_ptr_Output_v4f32 Output
+     %scaled = OpVariable %_ptr_Output_v4f32 Output
+   %ordinary = OpVariable %_ptr_Output_v4f32 Output
+          %2 = OpFunction %void None %36
+         %41 = OpLabel
+         %42 = OpLoad %f32 %a
+         %43 = OpLoad %f32 %b
+         %22 = OpFAdd %f32 %42 %43
+         %23 = OpFSub %f32 %22 %43
+         %24 = OpFMul %f32 %23 %43
+         %25 = OpFDiv %f32 %24 %43
+         %26 = OpFRem %f32 %25 %43
+         %27 = OpFAdd %f32 %26 %43
+         %44 = OpExtInst %f32 %1 50 %27 %43 %42
+         %45 = OpFMul %f32 %44 %43
+         %46 = OpFAdd %f32 %45 %42
+               OpStore %output %46
+               OpNoLine
+               OpReturn
+               OpFunctionEnd
+          %6 = OpFunction %void None %36
+         %47 = OpLabel
+         %48 = OpLoad %v4f32 %a
+         %49 = OpLoad %v4f32 %b
+         %28 = OpFAdd %v4f32 %48 %49
+               OpStore %matching %28
+         %29 = OpFAdd %v4f32 %48 %49
+               OpStore %differing %29
+         %30 = OpFAdd %v4f32 %48 %49
+               OpStore %mixed %30
+         %31 = OpFAdd %v4f32 %48 %49
+               OpStore %mixed_reverse %31
+         %50 = OpCompositeExtract %f32 %49 0
+         %32 = OpVectorTimesScalar %v4f32 %48 %50
+               OpStore %scaled %32
+         %51 = OpFAdd %v4f32 %48 %49
+               OpStore %ordinary %51
+               OpNoLine
+               OpReturn
+               OpFunctionEnd

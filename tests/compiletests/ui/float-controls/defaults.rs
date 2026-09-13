@@ -7,15 +7,18 @@
 // normalize-stderr-test "\n\W*OpSource .*" -> ""
 // normalize-stderr-test "\n\W*%\d+ = OpString .*" -> ""
 
+#![feature(float_algebraic)]
+
 use spirv_std::spirv;
 
 // The snapshot's fast-math mask 196620 is NSZ | AllowRecip | AllowContract | AllowReassoc.
 // A zero mask disables these permissions.
 // Each entry point must retain its policy when it calls the same function.
+// The linker must copy this helper to preserve `compat_math` behavior.
 // The policy must include `f64`, which occurs only in the callee's body.
 #[inline(never)]
 fn shared(x: f32) -> f32 {
-    (x as f64 + 1.0) as f32
+    (x as f64).algebraic_add(1.0) as f32
 }
 
 #[spirv(compute(threads(1), compat_math))]

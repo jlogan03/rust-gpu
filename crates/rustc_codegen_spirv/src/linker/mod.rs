@@ -306,6 +306,8 @@ pub fn link(
         import_export_link::run(opts, sess, &mut output)?;
     }
 
+    float_controls::resolve_operation_policies(&mut output);
+
     {
         let _timer = sess.timer("link_dce-post-link");
         dce::dce(&mut output);
@@ -659,9 +661,16 @@ pub fn link(
     {
         let _timer = sess.timer("peephole_opts");
         let types = peephole_opts::collect_types(&output);
+        let fast_math_modes = peephole_opts::collect_fast_math_modes(&output);
         for func in &mut output.functions {
             peephole_opts::composite_construct(&types, func);
-            peephole_opts::vector_ops(output.header.as_mut().unwrap(), &types, func);
+            peephole_opts::vector_ops(
+                output.header.as_mut().unwrap(),
+                &types,
+                &fast_math_modes,
+                &mut output.annotations,
+                func,
+            );
             peephole_opts::bool_fusion(output.header.as_mut().unwrap(), &types, func);
         }
     }
