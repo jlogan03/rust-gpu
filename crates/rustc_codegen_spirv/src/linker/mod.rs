@@ -670,9 +670,16 @@ pub fn link(
     {
         let _timer = sess.timer("peephole_opts");
         let types = peephole_opts::collect_types(&output);
+        let fast_math_modes = peephole_opts::collect_fast_math_modes(&output);
         for func in &mut output.functions {
             peephole_opts::composite_construct(&types, func);
-            peephole_opts::vector_ops(output.header.as_mut().unwrap(), &types, func);
+            peephole_opts::vector_ops(
+                output.header.as_mut().unwrap(),
+                &types,
+                &fast_math_modes,
+                &mut output.annotations,
+                func,
+            );
             peephole_opts::bool_fusion(output.header.as_mut().unwrap(), &types, func);
         }
     }

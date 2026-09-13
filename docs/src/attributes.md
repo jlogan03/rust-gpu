@@ -69,8 +69,13 @@ pub fn fast_fragment() {}
 ```
 
 The three annotations are mutually exclusive and take no arguments. The policy is
-per entry point, including its callees. Algebraic and unsafe fast intrinsics
-retain their existing lowering.
+per entry point, including its callees. A helper shared between `compat_math` and
+`rust_math`/`fast_math` entry points is specialized as needed to keep their
+operation policies separate.
+Within either `rust_math` or `fast_math`, explicit Rust `algebraic_*` operations allow
+reassociation, contraction, reciprocal transformations and ignoring signed zero
+but inherit the entry point's subnormal and rounding modes. `compat_math` entry points
+retain the previous lowering of algebraic and unsafe fast intrinsics.
 Neither safe policy assumes that inputs cannot be NaN or infinity. Explicit
 `mul_add` is fused under both policies.
 

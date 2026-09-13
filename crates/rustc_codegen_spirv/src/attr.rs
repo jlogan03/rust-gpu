@@ -23,6 +23,12 @@ pub(crate) const ALGEBRAIC_MATH_FLAGS: u32 = rspirv::spirv::FPFastMathMode::ALLO
     | rspirv::spirv::FPFastMathMode::ALLOW_RECIP.bits()
     | rspirv::spirv::FPFastMathMode::NSZ.bits();
 
+// Unsafe *_fast intrinsics have stronger preconditions than safe algebraic ops.
+pub(crate) const UNSAFE_FAST_MATH_FLAGS: u32 = ALGEBRAIC_MATH_FLAGS
+    | rspirv::spirv::FPFastMathMode::NOT_NAN.bits()
+    | rspirv::spirv::FPFastMathMode::NOT_INF.bits()
+    | rspirv::spirv::FPFastMathMode::ALLOW_TRANSFORM.bits();
+
 // FIXME(eddyb) replace with `ArrayVec<[Word; 3]>`.
 #[derive(Copy, Clone, Debug)]
 pub struct ExecutionModeExtra {
