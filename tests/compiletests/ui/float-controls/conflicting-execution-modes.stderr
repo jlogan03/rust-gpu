@@ -1,5 +1,5 @@
 error: `signed_zero_inf_nan_preserve` conflicts with `fast_math`
-  --> $DIR/conflicting-execution-modes.rs:20:5
+  --> $DIR/conflicting-execution-modes.rs:29:5
    |
 LL |     signed_zero_inf_nan_preserve = 64,
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -7,7 +7,7 @@ LL |     signed_zero_inf_nan_preserve = 64,
    = help: use `compat_math` to configure floating-point execution modes manually
 
 error: `rounding_mode_rtz` conflicts with `fast_math`
-  --> $DIR/conflicting-execution-modes.rs:21:5
+  --> $DIR/conflicting-execution-modes.rs:30:5
    |
 LL |     rounding_mode_rtz = 16,
    |     ^^^^^^^^^^^^^^^^^^^^^^
@@ -15,7 +15,7 @@ LL |     rounding_mode_rtz = 16,
    = help: use `compat_math` to configure floating-point execution modes manually
 
 error: `denorm_preserve` conflicts with `fast_math`
-  --> $DIR/conflicting-execution-modes.rs:22:5
+  --> $DIR/conflicting-execution-modes.rs:31:5
    |
 LL |     denorm_preserve = 32,
    |     ^^^^^^^^^^^^^^^^^^^^
@@ -23,7 +23,7 @@ LL |     denorm_preserve = 32,
    = help: use `compat_math` to configure floating-point execution modes manually
 
 error: `contraction_off` conflicts with `fast_math`
-  --> $DIR/conflicting-execution-modes.rs:23:5
+  --> $DIR/conflicting-execution-modes.rs:32:5
    |
 LL |     contraction_off,
    |     ^^^^^^^^^^^^^^^
@@ -31,7 +31,7 @@ LL |     contraction_off,
    = help: use `compat_math` to configure floating-point execution modes manually
 
 error: `signed_zero_inf_nan_preserve` conflicts with `rust_math`
-  --> $DIR/conflicting-execution-modes.rs:10:5
+  --> $DIR/conflicting-execution-modes.rs:19:5
    |
 LL |     signed_zero_inf_nan_preserve = 32,
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -39,7 +39,7 @@ LL |     signed_zero_inf_nan_preserve = 32,
    = help: use `compat_math` to configure floating-point execution modes manually
 
 error: `rounding_mode_rtz` conflicts with `rust_math`
-  --> $DIR/conflicting-execution-modes.rs:11:5
+  --> $DIR/conflicting-execution-modes.rs:20:5
    |
 LL |     rounding_mode_rtz = 64,
    |     ^^^^^^^^^^^^^^^^^^^^^^
@@ -47,7 +47,7 @@ LL |     rounding_mode_rtz = 64,
    = help: use `compat_math` to configure floating-point execution modes manually
 
 error: `denorm_flush_to_zero` conflicts with `rust_math`
-  --> $DIR/conflicting-execution-modes.rs:12:5
+  --> $DIR/conflicting-execution-modes.rs:21:5
    |
 LL |     denorm_flush_to_zero = 16,
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -55,12 +55,44 @@ LL |     denorm_flush_to_zero = 16,
    = help: use `compat_math` to configure floating-point execution modes manually
 
 error: `contraction_off` conflicts with `rust_math`
-  --> $DIR/conflicting-execution-modes.rs:13:5
+  --> $DIR/conflicting-execution-modes.rs:22:5
    |
 LL |     contraction_off
    |     ^^^^^^^^^^^^^^^
    |
    = help: use `compat_math` to configure floating-point execution modes manually
 
-error: aborting due to 8 previous errors
+error: `signed_zero_inf_nan_preserve` conflicts with the default `rust_math` policy
+  --> $DIR/conflicting-execution-modes.rs:9:5
+   |
+LL |     signed_zero_inf_nan_preserve = 16,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: use `compat_math` to configure floating-point execution modes manually
+
+error: `rounding_mode_rtz` conflicts with the default `rust_math` policy
+  --> $DIR/conflicting-execution-modes.rs:10:5
+   |
+LL |     rounding_mode_rtz = 32,
+   |     ^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: use `compat_math` to configure floating-point execution modes manually
+
+error: `denorm_flush_to_zero` conflicts with the default `rust_math` policy
+  --> $DIR/conflicting-execution-modes.rs:11:5
+   |
+LL |     denorm_flush_to_zero = 64,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: use `compat_math` to configure floating-point execution modes manually
+
+error: `contraction_off` conflicts with the default `rust_math` policy
+  --> $DIR/conflicting-execution-modes.rs:12:5
+   |
+LL |     contraction_off
+   |     ^^^^^^^^^^^^^^^
+   |
+   = help: use `compat_math` to configure floating-point execution modes manually
+
+error: aborting due to 12 previous errors
 

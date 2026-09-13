@@ -131,9 +131,9 @@ impl<'tcx> CodegenCx<'tcx> {
             name,
             entry.execution_model,
         );
-        // Only explicit Vulkan policies configure the floating-point environment.
-        // Compatibility mode and unannotated entries retain the target defaults.
-        if matches!(entry.math_mode, Some(MathMode::Rust | MathMode::Fast))
+        // Vulkan defaults to rust_math. Compatibility mode and unannotated
+        // non-Vulkan entry points leave the floating-point environment implicit.
+        if !matches!(entry.math_mode, Some(crate::attr::MathMode::Compat))
             && self
                 .tcx
                 .sess
@@ -144,7 +144,11 @@ impl<'tcx> CodegenCx<'tcx> {
                 .starts_with("vulkan")
         {
             let fast = matches!(entry.math_mode, Some(MathMode::Fast));
-            let policy = if fast { "`fast_math`" } else { "`rust_math`" };
+            let policy = match entry.math_mode {
+                Some(MathMode::Fast) => "`fast_math`",
+                Some(MathMode::Rust) => "`rust_math`",
+                _ => "the default `rust_math` policy",
+            };
             // Policies apply to every float width, so an explicit setting must
             // agree regardless of its width. The two legacy preservation modes
             // cannot coexist with FPFastMathDefault even when its flags agree.

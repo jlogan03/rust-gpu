@@ -9,12 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed 🛠
 
-- Honor algebraic and unsafe fast intrinsic permissions under explicit math policies, preserving compatible flags through vectorization and keeping compatibility callers on their previous lowering.
-
-- Add opt-in Vulkan `rust_math` and `fast_math` floating-point policies, with `compat_math` preserving existing behavior. See [floating-point policy attributes](docs/src/attributes.md#floating-point-policy-vulkan).
-
 - [PR#637](https://github.com/Rust-GPU/rust-gpu/pull/637) upgraded `bitflags` dependency from 1.x to 2.x
- 
+- [ ]() default to `rust_math`, with explicit `compat_math` and `fast_math` floating-point policies
+
 ## [0.10.0-alpha.1](https://github.com/Rust-GPU/rust-gpu/compare/v0.9.0...v0.10.0-alpha.1) - 2026-04-13
 
 Toolchain: `nightly-2026-04-11` (rustc 1.96.0)

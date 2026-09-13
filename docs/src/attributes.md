@@ -42,13 +42,13 @@ pub fn compute_2() {}
 
 ### Floating-point policy (Vulkan)
 
-Explicit `rust_math` entry points preserve subnormal arithmetic,
+Unannotated Vulkan entry points use `rust_math`: they preserve subnormal arithmetic,
 use round-to-nearest/ties-to-even,
 and disable reassociation, implicit FMA contraction and reciprocal transformations.
 Signed zero, NaN and infinity are not assumed away in this mode.
 
-Unannotated entry points retain the previous no-flags behavior. `compat_math`
-explicitly selects that behavior without introducing float-control feature
+An explicit `rust_math` annotation selects the same policy. Use `compat_math` to
+retain the previous no-flags behavior without introducing float-control feature
 requirements.
 
 Use `fast_math` inside an entry-point attribute to allow these transformations,
@@ -79,7 +79,7 @@ retain the previous lowering of algebraic and unsafe fast intrinsics.
 Neither safe policy assumes that inputs cannot be NaN or infinity. Explicit
 `mul_add` is fused under both policies.
 
-Both `rust_math` and `fast_math` use
+Both `rust_math` (including the unannotated default) and `fast_math` use
 `SPV_KHR_float_controls2`. Applications must enable Vulkan
 `shaderFloatControls2` and check the relevant per-width float-control properties.
 There is no silent fallback on unsupported devices. This is not a guarantee of
