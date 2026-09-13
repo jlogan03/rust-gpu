@@ -3,7 +3,7 @@
 use core::hint::black_box;
 use spirv_std::spirv;
 
-#[spirv(compute(threads(1)))]
+#[spirv(compute(threads(1), compat_math))]
 pub fn main_cs(#[spirv(storage_buffer, descriptor_set = 0, binding = 0)] out: &mut [u32]) {
     let x = 42i32;
     let y = black_box(x) as u32;

@@ -15,7 +15,7 @@ use spirv_std::arch::workgroup_memory_barrier_with_group_sync;
 use spirv_std::glam::*;
 use spirv_std::spirv;
 
-#[spirv(compute(threads(2)))]
+#[spirv(compute(compat_math, threads(2)))]
 pub fn main(
     #[spirv(descriptor_set = 0, binding = 0, storage_buffer)] input: &f32,
     #[spirv(descriptor_set = 0, binding = 1, storage_buffer)] output: &mut f32,

@@ -21,7 +21,7 @@ pub fn add_one(a: Vec4) -> Vec4 {
     a + 1.
 }
 
-#[spirv(fragment)]
+#[spirv(fragment(compat_math))]
 pub fn main(a: Vec4, result: &mut Vec4) {
     unsafe {
         asm! {

@@ -4,7 +4,7 @@ use spirv_std::arch::{atomic_i_add, atomic_i_sub, atomic_u_max, atomic_u_min};
 use spirv_std::memory::{Scope, Semantics};
 use spirv_std::spirv;
 
-#[spirv(compute(threads(32)))]
+#[spirv(compute(threads(32), compat_math))]
 pub fn main_cs(
     #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] counters: &mut [u32],
     #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] output: &mut [u32],

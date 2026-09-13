@@ -18,7 +18,7 @@ use spirv_std::glam::*;
 use spirv_std::spirv;
 use spirv_std::{Image, arch};
 
-#[spirv(compute(threads(8, 8)))]
+#[spirv(compute(compat_math, threads(8, 8)))]
 pub fn main(
     #[spirv(global_invocation_id)] global_id: UVec3,
     #[spirv(descriptor_set = 0, binding = 0, storage_buffer)] fill_color: &Vec4,

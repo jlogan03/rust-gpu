@@ -2,7 +2,7 @@
 
 use spirv_std::spirv;
 
-#[spirv(compute(threads(1)))]
+#[spirv(compute(threads(1), compat_math))]
 pub fn main_cs(#[spirv(storage_buffer, descriptor_set = 0, binding = 0)] output: &mut [u32]) {
     output[0] = 42;
 }

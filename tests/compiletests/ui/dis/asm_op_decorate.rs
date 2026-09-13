@@ -50,7 +50,7 @@ fn add_decorate() {
         );
     }
 }
-#[spirv(fragment)]
+#[spirv(fragment(compat_math))]
 pub fn main() {
     add_decorate();
 }

@@ -16,7 +16,7 @@
 use spirv_std::glam::*;
 use spirv_std::spirv;
 
-#[spirv(vertex)]
+#[spirv(vertex(compat_math))]
 pub fn main(input: Vec4, output: &mut Vec4) {
     *output = input + 1.;
 }

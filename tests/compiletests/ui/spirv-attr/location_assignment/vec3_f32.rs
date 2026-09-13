@@ -23,7 +23,7 @@ pub struct Vec3AndFloat {
     b: f32,
 }
 
-#[spirv(vertex)]
+#[spirv(vertex(compat_math))]
 pub fn main(out1: &mut Vec3AndFloat, out2: &mut f32) {
     const {
         assert!(size_of::<Vec3AndFloat>() == 16);

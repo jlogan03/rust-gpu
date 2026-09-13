@@ -136,7 +136,8 @@ impl Painter {
     }
 }
 
-#[spirv(fragment)]
+#[cfg_attr(feature = "compat-math", spirv(fragment(compat_math)))]
+#[cfg_attr(not(feature = "compat-math"), spirv(fragment))]
 pub fn main_fs(
     #[spirv(frag_coord)] in_frag_coord: Vec4,
     #[spirv(push_constant)] constants: &ShaderConstants,
@@ -244,7 +245,8 @@ pub fn main_fs(
     *output = painter.color.extend(1.0);
 }
 
-#[spirv(vertex)]
+#[cfg_attr(feature = "compat-math", spirv(vertex(compat_math)))]
+#[cfg_attr(not(feature = "compat-math"), spirv(vertex))]
 pub fn main_vs(#[spirv(vertex_index)] vert_idx: i32, #[spirv(position)] builtin_pos: &mut Vec4) {
     // Create a "full screen triangle" by mapping the vertex index.
     // ported from https://www.saschawillems.de/blog/2016/08/13/vulkan-tutorial-on-rendering-a-fullscreen-quad-without-buffers/

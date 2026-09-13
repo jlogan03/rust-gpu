@@ -28,7 +28,7 @@ pub struct Attr2 {
     pub d: f32,
 }
 
-#[spirv(geometry(input_points = 2, output_line_strip = 2))]
+#[spirv(geometry(compat_math, input_points = 2, output_line_strip = 2))]
 pub fn main(
     // #[spirv(descriptor_set = 0, binding = 0, storage_buffer)]
     #[spirv(position)] position_in: Vec4,

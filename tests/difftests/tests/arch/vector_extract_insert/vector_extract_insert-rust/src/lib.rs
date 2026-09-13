@@ -5,7 +5,7 @@ use spirv_std::arch::{vector_extract_dynamic, vector_insert_dynamic};
 use spirv_std::glam::Vec4;
 use spirv_std::spirv;
 
-#[spirv(compute(threads(64)))]
+#[spirv(compute(threads(64), compat_math))]
 pub fn main_cs(
     #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] input: &[[f32; 4]],
     #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] indices: &[u32],

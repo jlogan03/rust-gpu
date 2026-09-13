@@ -16,7 +16,7 @@
 use spirv_std::glam::*;
 use spirv_std::spirv;
 
-#[spirv(fragment)]
+#[spirv(fragment(compat_math))]
 pub fn main(
     #[spirv(frag_coord)] frag_coord: Vec4,
     #[spirv(descriptor_set = 0, binding = 0, storage_buffer)] viewport_size: &Vec2,

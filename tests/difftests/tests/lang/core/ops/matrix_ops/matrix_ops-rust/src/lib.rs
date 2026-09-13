@@ -6,7 +6,7 @@ use spirv_std::glam::{Mat2, Mat3, Mat4, UVec3, Vec2, Vec3, Vec4};
 use spirv_std::num_traits::Float;
 use spirv_std::spirv;
 
-#[spirv(compute(threads(32)))]
+#[spirv(compute(threads(32), compat_math))]
 pub fn main_cs(
     #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] input: &[f32],
     #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] output: &mut [f32],

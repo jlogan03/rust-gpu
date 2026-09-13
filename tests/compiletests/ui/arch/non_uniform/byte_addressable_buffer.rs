@@ -20,7 +20,7 @@ use spirv_std::glam::*;
 use spirv_std::image::*;
 use spirv_std::*;
 
-#[spirv(vertex)]
+#[spirv(vertex(compat_math))]
 pub fn main(
     index: u32,
     #[spirv(descriptor_set = 0, binding = 0, storage_buffer)] buffer: &[u32],

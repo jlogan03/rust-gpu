@@ -13,7 +13,7 @@
 
 use spirv_std::spirv;
 
-#[spirv(fragment)]
+#[spirv(fragment(compat_math))]
 pub fn main(output: &mut f64) {
     // This should optimize away the f32 type since it's widening
     const SMALL: f32 = 20.5;

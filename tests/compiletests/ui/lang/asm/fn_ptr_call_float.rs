@@ -21,7 +21,7 @@ pub fn add_one(a: f32) -> f32 {
     a + 1.
 }
 
-#[spirv(fragment)]
+#[spirv(fragment(compat_math))]
 pub fn main(a: f32, result: &mut f32) {
     unsafe {
         asm! {

@@ -5,7 +5,7 @@
 use spirv_std::num_traits::Float;
 use spirv_std::spirv;
 
-#[spirv(compute(threads(64)))]
+#[spirv(compute(threads(64), compat_math))]
 pub fn main_cs(
     #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] input: &[f32],
     #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] output: &mut [f32],

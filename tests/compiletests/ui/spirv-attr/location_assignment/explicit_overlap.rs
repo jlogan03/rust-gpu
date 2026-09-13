@@ -20,7 +20,7 @@
 use spirv_std::glam::*;
 use spirv_std::{Image, spirv};
 
-#[spirv(vertex)]
+#[spirv(vertex(compat_math))]
 pub fn main(#[spirv(location = 0)] out1: &mut Mat4, #[spirv(location = 1)] out2: &mut Vec2) {
     *out1 = Default::default();
     *out2 = Default::default();

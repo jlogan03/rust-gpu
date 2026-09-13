@@ -146,6 +146,7 @@ fn maybe_watch(
         let has_debug_printf = options.force_spirv_passthru;
 
         let builder = SpirvBuilder::new(crate_path, "spirv-unknown-vulkan1.1")
+            .shader_crate_features(["compat-math".into()])
             .shader_panic_strategy(if has_debug_printf {
                 spirv_builder::ShaderPanicStrategy::DebugPrintfThenExit {
                     print_inputs: true,

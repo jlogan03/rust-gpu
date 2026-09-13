@@ -123,12 +123,17 @@ impl MyDevice {
                                 .synchronization2(true)
                                 .dynamic_rendering(true),
                         )
+                        .push_next(
+                            &mut vk::PhysicalDeviceShaderFloatControls2FeaturesKHR::default()
+                                .shader_float_controls2(true),
+                        )
                         .queue_create_infos(&[vk::DeviceQueueCreateInfo::default()
                             .queue_family_index(main_queue_family)
                             .queue_priorities(&[1.0])])
                         .enabled_extension_names(&[
                             khr::swapchain::NAME.as_ptr(),
                             khr::shader_non_semantic_info::NAME.as_ptr(),
+                            khr::shader_float_controls2::NAME.as_ptr(),
                         ]),
                     None,
                 )
