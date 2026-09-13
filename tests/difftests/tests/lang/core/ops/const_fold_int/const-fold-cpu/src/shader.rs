@@ -1,7 +1,7 @@
 use crate::{EvalResult, Variants};
 use spirv_std::spirv;
 
-#[spirv(compute(threads(1)))]
+#[spirv(compute(threads(1), compat_math))]
 pub fn main_cs(
     #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] variant: &u32,
     #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] input_patterns: &[u32; 8],

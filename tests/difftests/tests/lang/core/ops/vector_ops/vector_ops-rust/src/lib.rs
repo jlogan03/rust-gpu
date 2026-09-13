@@ -6,7 +6,7 @@ use spirv_std::glam::{UVec2, UVec3, UVec4, Vec2, Vec3, Vec4, Vec4Swizzles};
 use spirv_std::num_traits::Float;
 use spirv_std::spirv;
 
-#[spirv(compute(threads(32)))]
+#[spirv(compute(threads(32), compat_math))]
 pub fn main_cs(
     #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] input: &[f32],
     #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] output: &mut [f32],

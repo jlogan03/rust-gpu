@@ -18,7 +18,7 @@
 
 use spirv_std::spirv;
 
-#[spirv(fragment)]
+#[spirv(fragment(compat_math))]
 pub fn main(
     out: &mut u32,
 

@@ -41,7 +41,8 @@ pub fn collatz(mut n: u32) -> Option<u32> {
 }
 
 // LocalSize/numthreads of (x = 64, y = 1, z = 1)
-#[spirv(compute(threads(64)))]
+#[cfg_attr(feature = "compat-math", spirv(compute(threads(64), compat_math)))]
+#[cfg_attr(not(feature = "compat-math"), spirv(compute(threads(64))))]
 pub fn main_cs(
     #[spirv(global_invocation_id)] id: UVec3,
     #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] prime_indices: &mut [u32],

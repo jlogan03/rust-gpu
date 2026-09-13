@@ -48,7 +48,7 @@ impl Vec3 {
     }
 }
 
-#[spirv(fragment)]
+#[spirv(fragment(compat_math))]
 pub fn main(input: Data<Vec3>, output: &mut Data<Vec3A>) {
     *output = Data {
         t: input.t.to_vec3a(),

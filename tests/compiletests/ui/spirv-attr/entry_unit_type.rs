@@ -16,7 +16,7 @@
 use spirv_std::glam::*;
 use spirv_std::{Image, spirv};
 
-#[spirv(vertex)]
+#[spirv(vertex(compat_math))]
 pub fn main(in1: (), in2: u32, out1: &mut [f32; 3], out2: &mut (), out3: &mut f32) {
     *out1 = Default::default();
     *out2 = Default::default();

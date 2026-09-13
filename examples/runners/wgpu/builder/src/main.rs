@@ -6,7 +6,8 @@ use std::path::{Path, PathBuf};
 
 fn build_shader(path_to_crate: &str, codegen_names: bool) -> Result<(), Box<dyn Error>> {
     let path_to_crate = Path::new(env!("CARGO_MANIFEST_DIR")).join(path_to_crate);
-    let mut builder = SpirvBuilder::new(path_to_crate, "spirv-unknown-vulkan1.1");
+    let mut builder = SpirvBuilder::new(path_to_crate, "spirv-unknown-vulkan1.1")
+        .shader_crate_features(["compat-math".into()]);
     builder.build_script.defaults = true;
     builder.build_script.env_shader_spv_path = Some(true);
     // Give this spirv-builder a unique target dir, so that rebuilding android and the main wgpu app's target dir
