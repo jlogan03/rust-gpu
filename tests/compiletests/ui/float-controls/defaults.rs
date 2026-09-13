@@ -21,7 +21,7 @@ pub fn legacy(#[spirv(storage_buffer, descriptor_set = 0, binding = 0)] data: &m
     data[0] = shared(data[0], data[1]);
 }
 
-#[spirv(compute(threads(1), rust_math))]
+#[spirv(compute(threads(1)))]
 pub fn strict(#[spirv(storage_buffer, descriptor_set = 0, binding = 0)] data: &mut [f32; 2]) {
     data[0] = shared(data[0], data[1]);
     data[1] = data[0].algebraic_add(data[1]);
