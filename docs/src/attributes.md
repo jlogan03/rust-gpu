@@ -40,6 +40,53 @@ pub fn compute_1() {}
 pub fn compute_2() {}
 ```
 
+### Floating-point policy (Vulkan)
+
+Explicit `rust_math` entry points preserve subnormal arithmetic,
+use round-to-nearest/ties-to-even,
+and disable reassociation, implicit FMA contraction and reciprocal transformations.
+Signed zero, NaN and infinity are not assumed away in this mode.
+
+Unannotated entry points retain the previous no-flags behavior. `compat_math`
+explicitly selects that behavior without introducing float-control feature
+requirements.
+
+Use `fast_math` inside an entry-point attribute to allow these transformations,
+ignore signed-zero distinctions and flush subnormals to zero:
+
+```rust
+#[spirv(compute(threads(64), rust_math))]
+pub fn strict_compute() {}
+
+#[spirv(compute(threads(64), compat_math))]
+pub fn compatible_compute() {}
+
+#[spirv(compute(threads(64), fast_math))]
+pub fn fast_compute() {}
+
+#[spirv(fragment(fast_math))]
+pub fn fast_fragment() {}
+```
+
+The three annotations are mutually exclusive and take no arguments. The policy is
+per entry point, including its callees. Algebraic and unsafe fast intrinsics
+retain their existing lowering.
+Neither safe policy assumes that inputs cannot be NaN or infinity. Explicit
+`mul_add` is fused under both policies.
+
+Both `rust_math` and `fast_math` use
+`SPV_KHR_float_controls2`. Applications must enable Vulkan
+`shaderFloatControls2` and check the relevant per-width float-control properties.
+There is no silent fallback on unsupported devices. This is not a guarantee of
+full IEEE-754 accuracy for division or transcendental functions. 
+
+Non-Vulkan targets retain their previous defaults; `compat_math` is a no-op there,
+while explicit `rust_math` and `fast_math` require a Vulkan target.
+Capabilities are module-wide: a module containing any `rust_math` or `fast_math`
+entry point can require the new features even when selecting a `compat_math`
+entry point. Compile to separate modules to deploy compatibility-mode shaders on
+devices without those features.
+
 ### Override entry point name
 
 You can override the default `OpEntryPoint` name for any entry point with the `entry_point_name` sub-attribute on any of the execution model attributes. (e.g. `#[spirv(vertex(entry_point_name="foo"))]`)
