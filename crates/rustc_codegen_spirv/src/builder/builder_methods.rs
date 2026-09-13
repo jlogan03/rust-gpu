@@ -86,7 +86,7 @@ macro_rules! simple_op {
         $(, int: $inst_int:ident)?
         $(, uint: $inst_uint:ident)?
         $(, sint: $inst_sint:ident)?
-        $(, float: $inst_float:ident)?
+        $(, float: $inst_float:ident $(, math_flags: $math_flags:expr)?)?
         $(, bool: $inst_bool:ident)?
         $(, fold_const {
             $(int($int_lhs:ident, $int_rhs:ident) => $fold_int:expr;)?
@@ -134,8 +134,18 @@ macro_rules! simple_op {
                         .$inst_sint(result_type, None, lhs.def(self), rhs.def(self))
                 })?
                 $(SpirvType::Float(_) => {
-                    self.emit()
-                        .$inst_float(result_type, None, lhs.def(self), rhs.def(self))
+                    let result = self.emit()
+                        .$inst_float(result_type, None, lhs.def(self), rhs.def(self));
+                    $(
+                        if self.tcx.sess.target.options.env.desc().starts_with("vulkan") {
+                            let mut emit = self.emit_global();
+                            // Private, temporary marker: the linker resolves this
+                            // only for callees using rust_math or fast_math.
+                            emit.decorate(*result.as_ref().unwrap(), rspirv::spirv::Decoration::UserSemantic,
+                                [Operand::LiteralString(format!("rust_gpu.math_flags:{}", $math_flags))]);
+                        }
+                    )?
+                    result
                 })?
                 $(SpirvType::Bool => {
                     self.emit()
@@ -1587,10 +1597,9 @@ impl<'a, 'tcx> BuilderMethods<'a, 'tcx> for Builder<'a, 'tcx> {
             int(a, b) => a.checked_add(b)?;
         }
     }
-    // FIXME(eddyb) try to annotate the SPIR-V for `fast` and `algebraic`.
     simple_op! {fadd, float: f_add}
-    simple_op! {fadd_fast, float: f_add} // fast=normal
-    simple_op! {fadd_algebraic, float: f_add} // algebraic=normal
+    simple_op! {fadd_fast, float: f_add, math_flags: crate::attr::UNSAFE_FAST_MATH_FLAGS}
+    simple_op! {fadd_algebraic, float: f_add, math_flags: crate::attr::ALGEBRAIC_MATH_FLAGS}
     simple_op! {
         sub,
         int: i_sub,
@@ -1599,8 +1608,8 @@ impl<'a, 'tcx> BuilderMethods<'a, 'tcx> for Builder<'a, 'tcx> {
         }
     }
     simple_op! {fsub, float: f_sub}
-    simple_op! {fsub_fast, float: f_sub} // fast=normal
-    simple_op! {fsub_algebraic, float: f_sub} // algebraic=normal
+    simple_op! {fsub_fast, float: f_sub, math_flags: crate::attr::UNSAFE_FAST_MATH_FLAGS}
+    simple_op! {fsub_algebraic, float: f_sub, math_flags: crate::attr::ALGEBRAIC_MATH_FLAGS}
     simple_op! {
         mul,
         int: i_mul,
@@ -1609,8 +1618,8 @@ impl<'a, 'tcx> BuilderMethods<'a, 'tcx> for Builder<'a, 'tcx> {
         }
     }
     simple_op! {fmul, float: f_mul}
-    simple_op! {fmul_fast, float: f_mul} // fast=normal
-    simple_op! {fmul_algebraic, float: f_mul} // algebraic=normal
+    simple_op! {fmul_fast, float: f_mul, math_flags: crate::attr::UNSAFE_FAST_MATH_FLAGS}
+    simple_op! {fmul_algebraic, float: f_mul, math_flags: crate::attr::ALGEBRAIC_MATH_FLAGS}
     simple_op! {
         udiv,
         uint: u_div,
@@ -1643,8 +1652,8 @@ impl<'a, 'tcx> BuilderMethods<'a, 'tcx> for Builder<'a, 'tcx> {
         }
     }
     simple_op! {fdiv, float: f_div}
-    simple_op! {fdiv_fast, float: f_div} // fast=normal
-    simple_op! {fdiv_algebraic, float: f_div} // algebraic=normal
+    simple_op! {fdiv_fast, float: f_div, math_flags: crate::attr::UNSAFE_FAST_MATH_FLAGS}
+    simple_op! {fdiv_algebraic, float: f_div, math_flags: crate::attr::ALGEBRAIC_MATH_FLAGS}
     simple_op! {
         urem,
         uint: u_mod,
@@ -1660,8 +1669,8 @@ impl<'a, 'tcx> BuilderMethods<'a, 'tcx> for Builder<'a, 'tcx> {
         }
     }
     simple_op! {frem, float: f_rem}
-    simple_op! {frem_fast, float: f_rem} // fast=normal
-    simple_op! {frem_algebraic, float: f_rem} // algebraic=normal
+    simple_op! {frem_fast, float: f_rem, math_flags: crate::attr::UNSAFE_FAST_MATH_FLAGS}
+    simple_op! {frem_algebraic, float: f_rem, math_flags: crate::attr::ALGEBRAIC_MATH_FLAGS}
     simple_shift_op! {
         shl,
         int: shift_left_logical,

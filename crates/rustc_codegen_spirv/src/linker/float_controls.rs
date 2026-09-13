@@ -1,7 +1,7 @@
 //! Preserve floating-point policies through the linker pipeline.
 //!
-//! Before SPIR-T, save entry-point defaults outside the module.
-//! After SPIR-T, expand those defaults
+//! Before SPIR-T, resolve intrinsic markers into operation decorations and save
+//! entry-point defaults outside the module. After SPIR-T, expand those defaults
 //! to the reachable float widths. After module splitting and DCE, discard any
 //! float-control capabilities that the surviving code no longer needs.
 
@@ -14,6 +14,9 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 // Carry the entry policy by name across that pipeline, then materialize modes
 // before SPIRV-Tools performs any arithmetic optimization or validation.
 pub(super) fn take_policies(module: &mut Module) -> Vec<(String, ExecutionModel, u32)> {
+    // Intrinsic lowering needs to know which entry points have explicit policies,
+    // so resolve it before removing their FPFastMathDefault modes.
+    resolve_operation_policies(module);
     let mut policies = Vec::new();
     module.execution_modes.retain(|mode| {
         if mode.operands.get(1) != Some(&Operand::ExecutionMode(ExecutionMode::FPFastMathDefault)) {
@@ -44,6 +47,203 @@ pub(super) fn take_policies(module: &mut Module) -> Vec<(String, ExecutionModel,
         false
     });
     policies
+}
+
+/// Keep legacy intrinsic lowering unchanged, even when a helper is shared with
+/// a rust_math or fast_math entry point. Resolve private codegen markers before SPIR-T or
+/// optimizers see the module; user-authored SPIR-V decorations are untouched.
+fn resolve_operation_policies(module: &mut Module) {
+    use rspirv::spirv::Decoration;
+    // Consume only our private markers. Whether they become real decorations
+    // depends on the calling entry points; legacy-only uses stay undecorated.
+    let mut marked = HashMap::new();
+    module.annotations.retain(|inst| {
+        if inst.operands.get(1) == Some(&Operand::Decoration(Decoration::UserSemantic))
+            && let Some(Operand::LiteralString(text)) = inst.operands.get(2)
+            && let Some(flags) = text.strip_prefix("rust_gpu.math_flags:")
+        {
+            marked.insert(
+                inst.operands[0].unwrap_id_ref(),
+                flags.parse::<u32>().unwrap(),
+            );
+            return false;
+        }
+        true
+    });
+    if marked.is_empty() {
+        return;
+    }
+    let explicit: HashSet<_> = module
+        .execution_modes
+        .iter()
+        .filter(|inst| {
+            inst.operands.get(1) == Some(&Operand::ExecutionMode(ExecutionMode::FPFastMathDefault))
+        })
+        .map(|inst| inst.operands[0].unwrap_id_ref())
+        .collect();
+    if explicit.is_empty() {
+        return;
+    }
+    // Partition the call graph by reachability from explicit-policy and legacy
+    // entry points. A shared helper can belong to both sets.
+    let calls: HashMap<_, Vec<_>> = module
+        .functions
+        .iter()
+        .map(|f| {
+            (
+                f.def.as_ref().unwrap().result_id.unwrap(),
+                f.all_inst_iter()
+                    .filter(|i| i.class.opcode == Op::FunctionCall)
+                    .map(|i| i.operands[0].unwrap_id_ref())
+                    .collect(),
+            )
+        })
+        .collect();
+    let reachable = |mut pending: Vec<u32>| {
+        let mut visited = HashSet::new();
+        while let Some(id) = pending.pop() {
+            if visited.insert(id)
+                && let Some(callees) = calls.get(&id)
+            {
+                pending.extend(callees);
+            }
+        }
+        visited
+    };
+    let opted = reachable(explicit.iter().copied().collect());
+    let legacy = reachable(
+        module
+            .entry_points
+            .iter()
+            .map(|e| e.operands[1].unwrap_id_ref())
+            .filter(|id| !explicit.contains(id))
+            .collect(),
+    );
+    // Only specialize helpers that contain, or transitively call, marked ops.
+    // Ordinary helpers can inherit either entry-point policy without cloning.
+    let mut needs_policy: HashSet<_> = module
+        .functions
+        .iter()
+        .filter(|f| {
+            f.all_inst_iter()
+                .any(|i| i.result_id.is_some_and(|id| marked.contains_key(&id)))
+        })
+        .map(|f| f.def.as_ref().unwrap().result_id.unwrap())
+        .collect();
+    // Walk backward from marked functions instead of rescanning every call.
+    let mut callers: HashMap<u32, Vec<u32>> = HashMap::new();
+    for (&caller, callees) in &calls {
+        for &callee in callees {
+            callers.entry(callee).or_default().push(caller);
+        }
+    }
+    let mut pending: Vec<u32> = needs_policy.iter().copied().collect();
+    while let Some(callee) = pending.pop() {
+        if let Some(parents) = callers.get(&callee) {
+            for &caller in parents {
+                if needs_policy.insert(caller) {
+                    pending.push(caller);
+                }
+            }
+        }
+    }
+    // Keep the original shared functions for legacy callers, and allocate fresh
+    // IDs for copies used by explicit-policy callers. Allocate every ID first so
+    // calls between cloned functions can be redirected with the same map.
+    let mut remap = HashMap::new();
+    let mut clones = Vec::new();
+    for f in &module.functions {
+        let id = f.def.as_ref().unwrap().result_id.unwrap();
+        if opted.contains(&id) && legacy.contains(&id) && needs_policy.contains(&id) {
+            for inst in f.all_inst_iter() {
+                if let Some(id) = inst.result_id {
+                    let bound = &mut module.header.as_mut().unwrap().bound;
+                    remap.insert(id, *bound);
+                    *bound += 1;
+                }
+            }
+            clones.push(f.clone());
+        }
+    }
+    let rewrite = |inst: &mut Instruction| {
+        if let Some(id) = &mut inst.result_id
+            && let Some(new) = remap.get(id)
+        {
+            *id = *new;
+        }
+        if let Some(id) = &mut inst.result_type
+            && let Some(new) = remap.get(id)
+        {
+            *id = *new;
+        }
+        for operand in &mut inst.operands {
+            if let Operand::IdRef(id) | Operand::IdScope(id) | Operand::IdMemorySemantics(id) =
+                operand
+                && let Some(new) = remap.get(id)
+            {
+                *id = *new;
+            }
+        }
+    };
+    // Redirect explicit-policy calls to the copies and materialize intrinsic
+    // flags on their arithmetic results. Read markers using the original IDs
+    // before rewriting them; the emitted decorations use the final IDs.
+    let mut decorate = Vec::new();
+    for f in module
+        .functions
+        .iter_mut()
+        .filter(|f| {
+            let id = f.def.as_ref().unwrap().result_id.unwrap();
+            opted.contains(&id) && !legacy.contains(&id)
+        })
+        .chain(clones.iter_mut())
+    {
+        for inst in f.all_inst_iter_mut() {
+            let flags = inst.result_id.and_then(|id| marked.get(&id)).copied();
+            rewrite(inst);
+            if let Some(flags) = flags {
+                decorate.push(Instruction::new(
+                    Op::Decorate,
+                    None,
+                    None,
+                    vec![
+                        Operand::IdRef(inst.result_id.unwrap()),
+                        Operand::Decoration(Decoration::FPFastMathMode),
+                        Operand::FPFastMathMode(rspirv::spirv::FPFastMathMode::from_bits_retain(
+                            flags,
+                        )),
+                    ],
+                ));
+            }
+        }
+    }
+    // Cloned instructions also need their existing decorations and debug names.
+    // Retain the originals and distinguish cloned function names in diagnostics.
+    for section in [&mut module.annotations, &mut module.debug_names] {
+        let extra: Vec<_> = section
+            .iter()
+            .filter(|i| {
+                i.operands
+                    .first()
+                    .and_then(|o| o.id_ref_any())
+                    .is_some_and(|id| remap.contains_key(&id))
+            })
+            .cloned()
+            .map(|mut i| {
+                if i.class.opcode == Op::Name
+                    && calls.contains_key(&i.operands[0].unwrap_id_ref())
+                    && let Operand::LiteralString(name) = &mut i.operands[1]
+                {
+                    name.push_str(".math");
+                }
+                rewrite(&mut i);
+                i
+            })
+            .collect();
+        section.extend(extra);
+    }
+    module.functions.extend(clones);
+    module.annotations.extend(decorate);
 }
 
 /// Emit final execution modes directly from the policies saved before SPIR-T.
