@@ -208,13 +208,22 @@ pub fn link(
 
     // FIXME(eddyb) deduplicate with `SpirtDumpGuard`.
     let dump_spv_and_spirt = |spv_module: &Module, dump_file_path_stem: PathBuf| {
-        let (spv_words, spirt_module_or_err, _) =
-            spv_module_to_spv_words_and_spirt_module(spv_module);
+        let spv_words = spv_module.assemble();
         std::fs::write(
             dump_file_path_stem.with_extension("spv"),
             spirv_tools::binary::from_binary(&spv_words),
         )
         .unwrap();
+
+        // SPIR-T cannot represent execution modes with ID operands. Omit them
+        // only from the readable dumps, keeping the binary and real module intact.
+        // The control-flow representation does not depend on float flags, so
+        // omitting these modes preserves that debugging view.
+        let mut spirt_input = spv_module.clone();
+        spirt_input
+            .execution_modes
+            .retain(|inst| inst.class.opcode != Op::ExecutionModeId);
+        let (_, spirt_module_or_err, _) = spv_module_to_spv_words_and_spirt_module(&spirt_input);
 
         // FIXME(eddyb) reify SPIR-V -> SPIR-T errors so they're easier to debug.
         if let Ok(mut module) = spirt_module_or_err {
