@@ -17,7 +17,7 @@ use rustc_span::{Ident, Span, Symbol};
 use smallvec::SmallVec;
 use std::rc::Rc;
 
-// Match rustc's LLVMRustSetAlgebraicMath: notably, no NotNaN/NotInf assumptions.
+// Use rustc's `LLVMRustSetAlgebraicMath` flags. These flags exclude `NotNaN` and `NotInf`.
 pub(crate) const ALGEBRAIC_MATH_FLAGS: u32 = rspirv::spirv::FPFastMathMode::ALLOW_REASSOC.bits()
     | rspirv::spirv::FPFastMathMode::ALLOW_CONTRACT.bits()
     | rspirv::spirv::FPFastMathMode::ALLOW_RECIP.bits()

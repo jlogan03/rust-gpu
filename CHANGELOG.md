@@ -11,7 +11,9 @@ Toolchain: `nightly-2026-08-15` (rustc 1.99.0)
 
 ### Changed 🛠
 
-- Add opt-in Vulkan `rust_math` and `fast_math` floating-point policies, with `compat_math` preserving existing behavior. See [floating-point policy attributes](docs/src/attributes.md#floating-point-policy-vulkan).
+- Add opt-in Vulkan floating-point policies: `rust_math` and `fast_math`.
+  Use `compat_math` to preserve existing behavior.
+  See [floating-point policy attributes](docs/src/attributes.md#floating-point-policy-vulkan).
 
 ### Fixed 🩹
 

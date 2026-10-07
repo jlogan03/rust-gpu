@@ -16,7 +16,7 @@ pub fn legacy(#[spirv(storage_buffer, descriptor_set = 0, binding = 0)] data: &m
     data[1] = unsafe { core::intrinsics::fmul_fast(data[0], data[1]) };
 }
 
-// Opting in without using floats must not introduce float-control requirements.
+// A policy must not add float-control requirements when the entry point uses no floats.
 #[spirv(compute(threads(1), rust_math))]
 pub fn integer(#[spirv(storage_buffer, descriptor_set = 0, binding = 0)] data: &mut u32) {
     *data += 1;
