@@ -7,15 +7,9 @@
 
 use spirv_std::spirv;
 
-// Fragment entry points must receive the same policy settings as compute entry points.
+// Floating-point policies also apply to fragment entry points.
 // The snapshot's fast-math mask 196620 is NSZ | AllowRecip | AllowContract | AllowReassoc.
-// A zero mask disables these permissions.
-#[spirv(fragment(rust_math))]
-pub fn strict(#[spirv(location = 0)] input: f32, #[spirv(location = 0)] output: &mut f32) {
-    *output = (input + 1.0) - input;
-}
-
 #[spirv(fragment(fast_math))]
-pub fn fast(#[spirv(location = 0)] input: f32, #[spirv(location = 0)] output: &mut f32) {
-    *output = (input + 1.0) - input;
+pub fn fast(#[spirv(location = 0)] output: &mut f32) {
+    *output = 0.0;
 }

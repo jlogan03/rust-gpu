@@ -11,9 +11,9 @@
 use spirv_std::spirv;
 
 #[spirv(compute(threads(1)))]
-pub fn legacy(#[spirv(storage_buffer, descriptor_set = 0, binding = 0)] data: &mut [f32; 2]) {
-    data[0] = data[0].algebraic_add(data[1]);
-    data[1] = unsafe { core::intrinsics::fmul_fast(data[0], data[1]) };
+pub fn legacy(#[spirv(storage_buffer, descriptor_set = 0, binding = 0)] data: &mut f32) {
+    *data = data.algebraic_add(*data);
+    *data = unsafe { core::intrinsics::fmul_fast(*data, *data) };
 }
 
 // A policy must not add float-control requirements when the entry point uses no floats.

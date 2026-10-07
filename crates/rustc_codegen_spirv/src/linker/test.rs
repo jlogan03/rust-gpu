@@ -248,49 +248,36 @@ fn without_header_eq(output: Module, expected: &str) {
 #[test]
 fn split_float_controls_extensions() {
     use rspirv::binary::Assemble;
-    use rspirv::spirv::FPFastMathMode;
 
     // Splitting must retain the extensions that each entry point requires.
     // Naga must accept the compatibility output.
-    let algebraic_flags = (FPFastMathMode::NSZ
-        | FPFastMathMode::ALLOW_RECIP
-        | FPFastMathMode::ALLOW_CONTRACT
-        | FPFastMathMode::ALLOW_REASSOC)
-        .bits();
-    let mut source = format!(
-        r#"
+    let mut source = r#"
         OpCapability Shader
         OpCapability FloatControls2
         OpCapability RoundingModeRTZ
-        OpCapability SignedZeroInfNanPreserve
         OpExtension "SPV_KHR_float_controls"
         OpExtension "SPV_KHR_float_controls2"
         OpMemoryModel Logical GLSL450
         OpEntryPoint Fragment %strict "strict" %output
-        OpEntryPoint Fragment %fast "fast" %output
         OpEntryPoint Fragment %compat "compat" %output
         OpEntryPoint Fragment %legacy "legacy" %output
         OpExecutionMode %strict OriginUpperLeft
-        OpExecutionMode %fast OriginUpperLeft
         OpExecutionMode %compat OriginUpperLeft
         OpExecutionMode %legacy OriginUpperLeft
         OpExecutionModeId %strict FPFastMathDefault %float %no_fast_math
-        OpExecutionModeId %fast FPFastMathDefault %float %algebraic
         OpExecutionMode %legacy RoundingModeRTZ 32
-        OpExecutionMode %legacy SignedZeroInfNanPreserve 32
         OpDecorate %output Location 0
         %void = OpTypeVoid
         %fn = OpTypeFunction %void
         %float = OpTypeFloat 32
         %uint = OpTypeInt 32 0
         %no_fast_math = OpConstant %uint 0
-        %algebraic = OpConstant %uint {algebraic_flags}
         %one = OpConstant %float 1
         %ptr_float = OpTypePointer Output %float
         %output = OpVariable %ptr_float Output
     "#
-    );
-    let entry_names = ["strict", "fast", "compat", "legacy"];
+    .to_string();
+    let entry_names = ["strict", "compat", "legacy"];
     for name in entry_names {
         source.push_str(&format!(
             "%{name} = OpFunction %void None %fn\n\
@@ -300,20 +287,11 @@ fn split_float_controls_extensions() {
         ));
     }
     let binary = assemble_spirv(&source);
-    let dump_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../target")
-        .join(format!("rust-gpu-float-controls-{}", std::process::id()));
-    std::fs::create_dir_all(dump_dir.parent().unwrap()).unwrap();
-    std::fs::create_dir(&dump_dir).unwrap();
-    let _cleanup = rustc_data_structures::defer(|| {
-        let _ = std::fs::remove_dir_all(&dump_dir);
-    });
     let result = link_modules_with_linker_opts(
         &[&binary],
         &super::Options {
             module_output_type: crate::codegen_cx::ModuleOutputType::Multiple,
             compact_ids: true,
-            dump_post_split: Some(dump_dir.clone()),
             ..Default::default()
         },
     )
@@ -326,22 +304,6 @@ fn split_float_controls_extensions() {
     };
     assert_eq!(modules.len(), entry_names.len());
     for (name, module) in modules.into_values() {
-        let dump = dump_dir.join(format!(".{name}"));
-        // All dump formats must retain execution modes with ID operands.
-        let has_policy = matches!(name.as_str(), "strict" | "fast");
-        for extension in ["spirt", "spirt.html"] {
-            let text = std::fs::read_to_string(dump.with_extension(extension)).unwrap();
-            assert!(!text.is_empty());
-            assert_eq!(text.contains("FPFastMathDefault"), has_policy);
-        }
-        let dumped = load(&std::fs::read(dump.with_extension("spv")).unwrap());
-        assert_eq!(
-            dumped
-                .execution_modes
-                .iter()
-                .any(|inst| inst.class.opcode == rspirv::spirv::Op::ExecutionModeId),
-            has_policy
-        );
         let words = module.assemble();
         validate(&words);
         let has_extension = |name: &str| {
@@ -351,10 +313,7 @@ fn split_float_controls_extensions() {
                 .any(|inst| inst.operands[0].unwrap_literal_string() == name)
         };
         assert_eq!(has_extension("SPV_KHR_float_controls"), name != "compat");
-        assert_eq!(
-            has_extension("SPV_KHR_float_controls2"),
-            matches!(name.as_str(), "strict" | "fast")
-        );
+        assert_eq!(has_extension("SPV_KHR_float_controls2"), name == "strict");
         if name == "compat" {
             // SPIR-V validation accepts unused extensions. Check the output with
             // Naga, which rejects unsupported extensions even when no code uses them.

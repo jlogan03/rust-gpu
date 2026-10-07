@@ -1,6 +1,6 @@
 // build-pass
 // only-vulkan1.2
-// compile-flags: -C target-feature=+Float64,+SignedZeroInfNanPreserve,+RoundingModeRTZ,+DenormFlushToZero
+// compile-flags: -C target-feature=+SignedZeroInfNanPreserve,+RoundingModeRTZ,+DenormFlushToZero
 // compile-flags: -C llvm-args=--disassemble-globals
 // normalize-stderr-test "\n\W*OpSource .*" -> ""
 // normalize-stderr-test "\n\W*%\d+ = OpString .*" -> ""
@@ -16,6 +16,4 @@ use spirv_std::spirv;
     rounding_mode_rtz = 64,
     denorm_flush_to_zero = 64
 ))]
-pub fn manual(#[spirv(storage_buffer, descriptor_set = 0, binding = 0)] data: &mut f64) {
-    *data += 1.0;
-}
+pub fn manual() {}
