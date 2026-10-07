@@ -6,8 +6,8 @@ use smallvec::SmallVec;
 use spirt::transform::{InnerInPlaceTransform, Transformer};
 use spirt::visit::InnerVisit;
 use spirt::{
-    Attr, AttrSetDef, ConstKind, Context, ControlNode, ControlNodeKind, DataInstKind, InternedStr,
-    Module, OrdAssertEq, Value, spv,
+    Attr, AttrSetDef, ConstKind, Context, DataInstKind, DbgSrcLoc, InternedStr, Module, Node,
+    NodeKind, OrdAssertEq, Value, spv,
 };
 
 /// Replace our custom extended instruction debuginfo with standard SPIR-V ones.
@@ -25,7 +25,6 @@ pub fn convert_custom_debuginfo_to_spv(module: &mut Module) {
 
             seen_types: FxIndexSet::default(),
             seen_consts: FxIndexSet::default(),
-            seen_data_inst_forms: FxIndexSet::default(),
             seen_global_vars: FxIndexSet::default(),
             seen_funcs: FxIndexSet::default(),
         };
@@ -56,19 +55,19 @@ struct CustomDebuginfoToSpv<'a> {
 }
 
 impl Transformer for CustomDebuginfoToSpv<'_> {
-    fn in_place_transform_control_node_def(
+    fn in_place_transform_node_def(
         &mut self,
-        mut func_at_control_node: spirt::func_at::FuncAtMut<'_, ControlNode>,
+        mut func_at_control_node: spirt::func_at::FuncAtMut<'_, Node>,
     ) {
-        // HACK(eddyb) this relies on the fact that `ControlNodeKind::Block` maps
+        // HACK(eddyb) this relies on the fact that `NodeKind::Block` maps
         // to one original SPIR-V block, which may not necessarily be true, and
         // steps should be taken elsewhere to explicitly unset debuginfo, instead
         // of relying on the end of a SPIR-V block implicitly unsetting it all.
         // NOTE(eddyb) allowing debuginfo to apply *outside* of a `Block` could
         // be useful in allowing *some* structured control-flow to have debuginfo,
         // but that would likely require more work on the SPIR-T side.
-        if let ControlNodeKind::Block { mut insts } = func_at_control_node.reborrow().def().kind {
-            let mut current_file_line_col = None;
+        if let NodeKind::Block { mut insts } = func_at_control_node.reborrow().def().kind {
+            let mut current_src_loc = None;
 
             // HACK(eddyb) buffering the `DataInst`s to remove from this block,
             // as iterating and modifying a list at the same time isn't supported.
@@ -83,7 +82,7 @@ impl Transformer for CustomDebuginfoToSpv<'_> {
                 if let DataInstKind::SpvExtInst {
                     ext_set,
                     inst: ext_inst,
-                } = self.cx[data_inst_def.form].kind
+                } = data_inst_def.kind
                     && ext_set == self.custom_ext_inst_set
                 {
                     let custom_op = CustomOp::decode(ext_inst);
@@ -116,13 +115,18 @@ impl Transformer for CustomDebuginfoToSpv<'_> {
                                 }
                                 _ => unreachable!(),
                             };
-                            current_file_line_col =
-                                Some((const_str(file), const_u32(line), const_u32(col)));
+                            let line_col = (const_u32(line), const_u32(col));
+                            current_src_loc = Some(DbgSrcLoc {
+                                file_path: const_str(file),
+                                start_line_col: line_col,
+                                end_line_col: line_col,
+                                inlined_callee_name_and_call_site: None,
+                            });
                             insts_to_remove.push(inst);
                             continue;
                         }
                         CustomInst::ClearDebugSrcLoc => {
-                            current_file_line_col = None;
+                            current_src_loc = None;
                             insts_to_remove.push(inst);
                             continue;
                         }
@@ -140,21 +144,15 @@ impl Transformer for CustomDebuginfoToSpv<'_> {
                     }
                 }
 
-                // Add/remove the equivalent `Attr::SpvDebugLine` attribute.
+                // Add/remove the equivalent `Attr::DbgSrcLoc` attribute.
                 // FIXME(eddyb) this could use more caching.
                 data_inst_def.attrs = self.cx.intern(AttrSetDef {
                     attrs: self.cx[data_inst_def.attrs]
                         .attrs
                         .iter()
-                        .filter(|attr| !matches!(attr, Attr::SpvDebugLine { .. }))
+                        .filter(|attr| !matches!(attr, Attr::DbgSrcLoc(_)))
                         .cloned()
-                        .chain(
-                            current_file_line_col.map(|(file, line, col)| Attr::SpvDebugLine {
-                                file_path: OrdAssertEq(file),
-                                line,
-                                col,
-                            }),
-                        )
+                        .chain(current_src_loc.map(|loc| Attr::DbgSrcLoc(OrdAssertEq(loc))))
                         .collect(),
                 });
             }
@@ -163,7 +161,7 @@ impl Transformer for CustomDebuginfoToSpv<'_> {
             for inst in insts_to_remove {
                 insts.remove(inst, func_at_control_node.data_insts);
             }
-            func_at_control_node.reborrow().def().kind = ControlNodeKind::Block { insts };
+            func_at_control_node.reborrow().def().kind = NodeKind::Block { insts };
         }
 
         func_at_control_node.inner_in_place_transform_with(self);
