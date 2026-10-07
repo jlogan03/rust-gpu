@@ -4,10 +4,9 @@ use spirt::func_at::{FuncAt, FuncAtMut};
 use spirt::transform::InnerInPlaceTransform;
 use spirt::visit::InnerVisit;
 use spirt::{
-    Const, ConstDef, ConstKind, Context, ControlNode, ControlNodeDef, ControlNodeKind,
-    ControlNodeOutputDecl, ControlRegion, ControlRegionInputDecl, DataInst, DataInstDef,
-    DataInstFormDef, DataInstKind, EntityOrientedDenseMap, FuncDefBody, SelectionKind, Type,
-    TypeDef, TypeKind, Value, spv,
+    Const, ConstDef, ConstKind, Context, DataInst, DataInstDef, DataInstKind,
+    EntityOrientedDenseMap, FuncDefBody, Node, NodeDef, NodeKind, NodeOutputDecl, Region,
+    RegionInputDecl, SelectionKind, Type, TypeDef, TypeKind, Value, spv,
 };
 use std::collections::hash_map::Entry;
 use std::{iter, slice};
@@ -42,10 +41,10 @@ pub(crate) fn reduce_in_func(cx: &Context, func_def_body: &mut FuncDefBody) {
         /// Replace uses of a `DataInst` with a reduced `Value`.
         DataInst(DataInst),
 
-        /// Replace an `OpSwitch` `ControlNode` with an `if`-`else` one.
+        /// Replace an `OpSwitch` `Node` with an `if`-`else` one.
         //
         // HACK(eddyb) see comment in `handle_control_node` for more details.
-        SwitchToIfElse(ControlNode),
+        SwitchToIfElse(Node),
     }
 
     loop {
@@ -58,22 +57,22 @@ pub(crate) fn reduce_in_func(cx: &Context, func_def_body: &mut FuncDefBody) {
         // HACK(eddyb) ignore the above, for now it's pretty bad due to iterator
         // invalidation (see comment on `let reduction_queue` too).
         let mut handle_control_node =
-            |func_at_control_node: FuncAt<'_, ControlNode>| match func_at_control_node.def() {
-                &ControlNodeDef {
-                    kind: ControlNodeKind::Block { insts },
+            |func_at_control_node: FuncAt<'_, Node>| match func_at_control_node.def() {
+                &NodeDef {
+                    kind: NodeKind::Block { insts },
                     ..
                 } => {
                     for func_at_inst in func_at_control_node.at(insts) {
-                        if let Ok(redu) = Reducible::try_from((cx, func_at_inst.def())) {
+                        if let Ok(redu) = Reducible::try_from(func_at_inst.def()) {
                             let redu_target = ReductionTarget::DataInst(func_at_inst.position);
                             reduction_queue.push((redu_target, redu));
                         }
                     }
                 }
 
-                ControlNodeDef {
+                NodeDef {
                     kind:
-                        ControlNodeKind::Select {
+                        NodeKind::Select {
                             kind,
                             scrutinee,
                             cases,
@@ -83,8 +82,8 @@ pub(crate) fn reduce_in_func(cx: &Context, func_def_body: &mut FuncDefBody) {
                     // FIXME(eddyb) this should probably be ran in the queue loop
                     // below, to more quickly benefit from previous reductions.
                     for i in 0..u32::try_from(outputs.len()).unwrap() {
-                        let output = Value::ControlNodeOutput {
-                            control_node: func_at_control_node.position,
+                        let output = Value::NodeOutput {
+                            node: func_at_control_node.position,
                             output_idx: i,
                         };
                         if let Entry::Vacant(entry) = value_replacements.entry(output) {
@@ -146,9 +145,9 @@ pub(crate) fn reduce_in_func(cx: &Context, func_def_body: &mut FuncDefBody) {
                     }
                 }
 
-                ControlNodeDef {
+                NodeDef {
                     kind:
-                        ControlNodeKind::Loop {
+                        NodeKind::Loop {
                             body,
                             initial_inputs,
                             ..
@@ -161,7 +160,7 @@ pub(crate) fn reduce_in_func(cx: &Context, func_def_body: &mut FuncDefBody) {
                     for (i, (&initial_input, &body_output)) in
                         initial_inputs.iter().zip(body_outputs).enumerate()
                     {
-                        let body_input = Value::ControlRegionInput {
+                        let body_input = Value::RegionInput {
                             region: *body,
                             input_idx: i as u32,
                         };
@@ -173,8 +172,8 @@ pub(crate) fn reduce_in_func(cx: &Context, func_def_body: &mut FuncDefBody) {
                     }
                 }
 
-                &ControlNodeDef {
-                    kind: ControlNodeKind::ExitInvocation { .. },
+                &NodeDef {
+                    kind: NodeKind::ExitInvocation { .. },
                     ..
                 } => {}
             };
@@ -207,25 +206,21 @@ pub(crate) fn reduce_in_func(cx: &Context, func_def_body: &mut FuncDefBody) {
 
                         // Replace the reduced `DataInstDef` itself with `OpNop`,
                         // removing the ability to use its "name" as a value.
-                        //
-                        // FIXME(eddyb) cache the interned `OpNop`.
                         *func_def_body.at_mut(inst).def() = DataInstDef {
                             attrs: Default::default(),
-                            form: cx.intern(DataInstFormDef {
-                                kind: DataInstKind::SpvInst(wk.OpNop.into()),
-                                output_type: None,
-                            }),
+                            kind: DataInstKind::SpvInst(wk.OpNop.into()),
+                            output_type: None,
                             inputs: iter::empty().collect(),
                         };
                     }
 
                     // HACK(eddyb) see comment in `handle_control_node` for more details.
-                    ReductionTarget::SwitchToIfElse(control_node) => {
-                        let control_node_def = func_def_body.at_mut(control_node).def();
+                    ReductionTarget::SwitchToIfElse(node) => {
+                        let control_node_def = func_def_body.at_mut(node).def();
                         match &control_node_def.kind {
-                            ControlNodeKind::Select { cases, .. } => match cases[..] {
+                            NodeKind::Select { cases, .. } => match cases[..] {
                                 [_default, case_0, case_1] => {
-                                    control_node_def.kind = ControlNodeKind::Select {
+                                    control_node_def.kind = NodeKind::Select {
                                         kind: SelectionKind::BoolCond,
                                         scrutinee: v,
                                         cases: [case_1, case_0].iter().copied().collect(),
@@ -268,27 +263,26 @@ pub(crate) fn reduce_in_func(cx: &Context, func_def_body: &mut FuncDefBody) {
 // FIXME(eddyb) maybe this kind of "parent map" should be provided by SPIR-T?
 #[derive(Default)]
 struct ParentMap {
-    data_inst_parent: EntityOrientedDenseMap<DataInst, ControlNode>,
-    control_node_parent: EntityOrientedDenseMap<ControlNode, ControlRegion>,
-    control_region_parent: EntityOrientedDenseMap<ControlRegion, ControlNode>,
+    data_inst_parent: EntityOrientedDenseMap<DataInst, Node>,
+    control_node_parent: EntityOrientedDenseMap<Node, Region>,
+    control_region_parent: EntityOrientedDenseMap<Region, Node>,
 }
 
 impl ParentMap {
     fn new(func_def_body: &FuncDefBody) -> Self {
         let mut visitor = VisitAllControlRegionsAndNodes {
             state: Self::default(),
-            visit_control_region:
-                |this: &mut Self, func_at_control_region: FuncAt<'_, ControlRegion>| {
-                    for func_at_child_control_node in func_at_control_region.at_children() {
-                        this.control_node_parent.insert(
-                            func_at_child_control_node.position,
-                            func_at_control_region.position,
-                        );
-                    }
-                },
-            visit_control_node: |this: &mut Self, func_at_control_node: FuncAt<'_, ControlNode>| {
+            visit_control_region: |this: &mut Self, func_at_control_region: FuncAt<'_, Region>| {
+                for func_at_child_control_node in func_at_control_region.at_children() {
+                    this.control_node_parent.insert(
+                        func_at_child_control_node.position,
+                        func_at_control_region.position,
+                    );
+                }
+            },
+            visit_control_node: |this: &mut Self, func_at_control_node: FuncAt<'_, Node>| {
                 let child_regions = match &func_at_control_node.def().kind {
-                    &ControlNodeKind::Block { insts } => {
+                    &NodeKind::Block { insts } => {
                         for func_at_inst in func_at_control_node.at(insts) {
                             this.data_inst_parent
                                 .insert(func_at_inst.position, func_at_control_node.position);
@@ -296,9 +290,9 @@ impl ParentMap {
                         &[][..]
                     }
 
-                    ControlNodeKind::Select { cases, .. } => cases,
-                    ControlNodeKind::Loop { body, .. } => slice::from_ref(body),
-                    ControlNodeKind::ExitInvocation { .. } => &[][..],
+                    NodeKind::Select { cases, .. } => cases,
+                    NodeKind::Loop { body, .. } => slice::from_ref(body),
+                    NodeKind::ExitInvocation { .. } => &[][..],
                 };
                 for &child_region in child_regions {
                     this.control_region_parent
@@ -317,8 +311,8 @@ impl ParentMap {
 fn try_reduce_select(
     cx: &Context,
     parent_map: &ParentMap,
-    select_control_node: ControlNode,
-    // FIXME(eddyb) are these redundant with the `ControlNode` above?
+    select_control_node: Node,
+    // FIXME(eddyb) are these redundant with the `Node` above?
     kind: &SelectionKind,
     scrutinee: Value,
     cases: impl Iterator<Item = Value>,
@@ -380,9 +374,9 @@ fn try_reduce_select(
                     // allow lifting an use of it outside the `Select`.
                     let region_defining_x = match x {
                         Value::Const(_) => unreachable!(),
-                        Value::ControlRegionInput { region, .. } => region,
-                        Value::ControlNodeOutput { control_node, .. } => {
-                            *parent_map.control_node_parent.get(control_node)?
+                        Value::RegionInput { region, .. } => region,
+                        Value::NodeOutput { node, .. } => {
+                            *parent_map.control_node_parent.get(node)?
                         }
                         Value::DataInstOutput(inst) => *parent_map
                             .control_node_parent
@@ -505,14 +499,12 @@ impl<V> Reducible<V> {
     }
 }
 
-// FIXME(eddyb) instead of taking a `&Context`, could `Reducible` hold a `DataInstForm`?
-impl TryFrom<(&Context, &DataInstDef)> for Reducible {
+impl TryFrom<&DataInstDef> for Reducible {
     type Error = ();
-    fn try_from((cx, inst_def): (&Context, &DataInstDef)) -> Result<Self, ()> {
-        let inst_form_def = &cx[inst_def.form];
-        if let DataInstKind::SpvInst(spv_inst) = &inst_form_def.kind {
+    fn try_from(inst_def: &DataInstDef) -> Result<Self, ()> {
+        if let DataInstKind::SpvInst(spv_inst) = &inst_def.kind {
             let op = PureOp::try_from(spv_inst)?;
-            let output_type = inst_form_def.output_type.unwrap();
+            let output_type = inst_def.output_type.unwrap();
             if let [input] = inst_def.inputs[..] {
                 return Ok(Self {
                     op,
@@ -527,7 +519,7 @@ impl TryFrom<(&Context, &DataInstDef)> for Reducible {
 
 impl Reducible {
     // HACK(eddyb) `IntToBool` is the only reason this can return `None`.
-    fn try_into_inst(self, cx: &Context) -> Option<DataInstDef> {
+    fn try_into_inst(self) -> Option<DataInstDef> {
         let Self {
             op,
             output_type,
@@ -535,10 +527,8 @@ impl Reducible {
         } = self;
         Some(DataInstDef {
             attrs: Default::default(),
-            form: cx.intern(DataInstFormDef {
-                kind: DataInstKind::SpvInst(op.try_into().ok()?),
-                output_type: Some(output_type),
-            }),
+            kind: DataInstKind::SpvInst(op.try_into().ok()?),
+            output_type: Some(output_type),
             inputs: iter::once(input).collect(),
         })
     }
@@ -655,11 +645,11 @@ enum ReductionStep {
 
 impl Reducible<&DataInstDef> {
     // FIXME(eddyb) force the input to actually be itself some kind of pure op.
-    fn try_reduce_output_of_data_inst(&self, cx: &Context) -> Option<ReductionStep> {
+    fn try_reduce_output_of_data_inst(&self) -> Option<ReductionStep> {
         let wk = &super::SpvSpecWithExtras::get().well_known;
 
         let input_inst_def = self.input;
-        if let DataInstKind::SpvInst(input_spv_inst) = &cx[input_inst_def.form].kind {
+        if let DataInstKind::SpvInst(input_spv_inst) = &input_inst_def.kind {
             // NOTE(eddyb) do not destroy information left in e.g. comments.
             #[allow(clippy::match_same_arms)]
             match self.op {
@@ -743,17 +733,17 @@ impl Reducible {
     ) -> Option<Value> {
         match self.input {
             Value::Const(ct) => self.with_input(ct).try_reduce_const(cx).map(Value::Const),
-            Value::ControlRegionInput {
+            Value::RegionInput {
                 region,
                 input_idx: state_idx,
             } => {
                 let loop_node = *parent_map.control_region_parent.get(region)?;
                 // HACK(eddyb) this can't be a closure due to lifetime elision.
                 fn loop_initial_states(
-                    func_at_loop_node: FuncAtMut<'_, ControlNode>,
+                    func_at_loop_node: FuncAtMut<'_, Node>,
                 ) -> &mut SmallVec<[Value; 2]> {
                     match &mut func_at_loop_node.def().kind {
-                        ControlNodeKind::Loop { initial_inputs, .. } => initial_inputs,
+                        NodeKind::Loop { initial_inputs, .. } => initial_inputs,
                         _ => unreachable!(),
                     }
                 }
@@ -768,9 +758,8 @@ impl Reducible {
                     .try_reduce(cx, func.reborrow(), value_replacements, parent_map, cache)?;
                 // HACK(eddyb) this is here because it can fail, see the comment
                 // on `output_from_updated_state` for what's actually going on.
-                let output_from_updated_state_inst = self
-                    .with_input(input_from_updated_state)
-                    .try_into_inst(cx)?;
+                let output_from_updated_state_inst =
+                    self.with_input(input_from_updated_state).try_into_inst()?;
 
                 // Now that the reduction succeeded for the initial state,
                 // we can proceed with augmenting the loop with the extra state.
@@ -778,7 +767,7 @@ impl Reducible {
 
                 let loop_state_decls = &mut func.reborrow().at(region).def().inputs;
                 let new_loop_state_idx = u32::try_from(loop_state_decls.len()).unwrap();
-                loop_state_decls.push(ControlRegionInputDecl {
+                loop_state_decls.push(RegionInputDecl {
                     attrs: Default::default(),
                     ty: self.output_type,
                 });
@@ -807,45 +796,39 @@ impl Reducible {
                     .iter()
                     .last
                     .filter(|&node| {
-                        matches!(
-                            func.reborrow().at(node).def().kind,
-                            ControlNodeKind::Block { .. }
-                        )
+                        matches!(func.reborrow().at(node).def().kind, NodeKind::Block { .. })
                     })
                     .unwrap_or_else(|| {
-                        let new_block = func.control_nodes.define(
+                        let new_block = func.nodes.define(
                             cx,
-                            ControlNodeDef {
-                                kind: ControlNodeKind::Block {
+                            NodeDef {
+                                kind: NodeKind::Block {
                                     insts: Default::default(),
                                 },
                                 outputs: Default::default(),
                             }
                             .into(),
                         );
-                        func.control_regions[region]
+                        func.regions[region]
                             .children
-                            .insert_last(new_block, func.control_nodes);
+                            .insert_last(new_block, func.nodes);
                         new_block
                     });
-                match &mut func.control_nodes[loop_body_last_block].kind {
-                    ControlNodeKind::Block { insts } => {
+                match &mut func.nodes[loop_body_last_block].kind {
+                    NodeKind::Block { insts } => {
                         insts.insert_last(output_from_updated_state, func.data_insts);
                     }
                     _ => unreachable!(),
                 }
 
-                Some(Value::ControlRegionInput {
+                Some(Value::RegionInput {
                     region,
                     input_idx: new_loop_state_idx,
                 })
             }
-            Value::ControlNodeOutput {
-                control_node,
-                output_idx,
-            } => {
-                let cases = match &func.reborrow().at(control_node).def().kind {
-                    ControlNodeKind::Select { cases, .. } => cases,
+            Value::NodeOutput { node, output_idx } => {
+                let cases = match &func.reborrow().at(node).def().kind {
+                    NodeKind::Select { cases, .. } => cases,
                     // NOTE(eddyb) only `Select`s can have outputs right now.
                     _ => unreachable!(),
                 };
@@ -870,8 +853,8 @@ impl Reducible {
 
                 // Try to avoid introducing a new output, by reducing the merge
                 // of the per-case output values to a single value, if possible.
-                let (kind, scrutinee) = match &func.reborrow().at(control_node).def().kind {
-                    ControlNodeKind::Select {
+                let (kind, scrutinee) = match &func.reborrow().at(node).def().kind {
+                    NodeKind::Select {
                         kind, scrutinee, ..
                     } => (kind, *scrutinee),
                     _ => unreachable!(),
@@ -879,7 +862,7 @@ impl Reducible {
                 if let Some(v) = try_reduce_select(
                     cx,
                     parent_map,
-                    control_node,
+                    node,
                     kind,
                     scrutinee,
                     per_case_new_output.iter().copied(),
@@ -888,9 +871,9 @@ impl Reducible {
                 }
 
                 // Merge the per-case output values into a new output.
-                let control_node_output_decls = &mut func.reborrow().at(control_node).def().outputs;
+                let control_node_output_decls = &mut func.reborrow().at(node).def().outputs;
                 let new_output_idx = u32::try_from(control_node_output_decls.len()).unwrap();
-                control_node_output_decls.push(ControlNodeOutputDecl {
+                control_node_output_decls.push(NodeOutputDecl {
                     attrs: Default::default(),
                     ty: self.output_type,
                 });
@@ -899,17 +882,14 @@ impl Reducible {
                     assert_eq!(per_case_outputs.len(), new_output_idx as usize);
                     per_case_outputs.push(new_output);
                 }
-                Some(Value::ControlNodeOutput {
-                    control_node,
+                Some(Value::NodeOutput {
+                    node,
                     output_idx: new_output_idx,
                 })
             }
             Value::DataInstOutput(inst) => {
                 let inst_def = &*func.reborrow().at(inst).def();
-                match self
-                    .with_input(inst_def)
-                    .try_reduce_output_of_data_inst(cx)?
-                {
+                match self.with_input(inst_def).try_reduce_output_of_data_inst()? {
                     ReductionStep::Complete(v) => Some(v),
                     // FIXME(eddyb) actually use a loop instead of recursing here.
                     ReductionStep::Partial(redu) => {

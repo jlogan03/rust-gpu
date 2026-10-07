@@ -4,8 +4,8 @@ use crate::custom_insts::{self, CustomInst, CustomOp};
 use smallvec::SmallVec;
 use spirt::func_at::FuncAt;
 use spirt::{
-    Attr, AttrSet, ConstDef, ConstKind, ControlNodeKind, DataInstFormDef, DataInstKind, DeclDef,
-    EntityDefs, ExportKey, Exportee, Module, Type, TypeDef, TypeKind, TypeOrConst, Value, cfg, spv,
+    Attr, AttrSet, ConstDef, ConstKind, DataInstKind, DeclDef, EntityDefs, ExportKey, Exportee,
+    Module, NodeKind, Type, TypeDef, TypeKind, TypeOrConst, Value, cfg, spv,
 };
 use std::fmt::Write as _;
 
@@ -105,15 +105,14 @@ pub fn convert_custom_aborts_to_unstructured_returns_in_entry_points(
                     .into_iter()
                     .next()
                     .and_then(|func_at_first_node| match func_at_first_node.def().kind {
-                        ControlNodeKind::Block { insts } => Some(insts),
+                        NodeKind::Block { insts } => Some(insts),
                         _ => None,
                     })
                     .unwrap_or_default())
                 .into_iter()
                 .filter_map(|func_at_inst| {
                     let data_inst_def = func_at_inst.def();
-                    let data_inst_form_def = &cx[data_inst_def.form];
-                    if let DataInstKind::SpvInst(spv_inst) = &data_inst_form_def.kind
+                    if let DataInstKind::SpvInst(spv_inst) = &data_inst_def.kind
                         && spv_inst.opcode == wk.OpLoad
                         && let Value::Const(ct) = data_inst_def.inputs[0]
                         && let ConstKind::PtrToGlobalVar(gv) = cx[ct].kind
@@ -121,7 +120,7 @@ pub fn convert_custom_aborts_to_unstructured_returns_in_entry_points(
                     {
                         return Some((
                             gv,
-                            data_inst_form_def.output_type.unwrap(),
+                            data_inst_def.output_type.unwrap(),
                             Value::DataInstOutput(func_at_inst.position),
                         ));
                     }
@@ -194,13 +193,13 @@ pub fn convert_custom_aborts_to_unstructured_returns_in_entry_points(
             .expect("Abort->OpReturn can only be done on unstructured CFGs")
             .rev_post_order(func_def_body);
         for region in rpo_regions {
-            let region_def = &func_def_body.control_regions[region];
+            let region_def = &func_def_body.regions[region];
             let control_node_def = match region_def.children.iter().last {
-                Some(last_node) => &mut func_def_body.control_nodes[last_node],
+                Some(last_node) => &mut func_def_body.nodes[last_node],
                 _ => continue,
             };
             let block_insts = match &mut control_node_def.kind {
-                ControlNodeKind::Block { insts } => insts,
+                NodeKind::Block { insts } => insts,
                 _ => continue,
             };
 
@@ -217,8 +216,8 @@ pub fn convert_custom_aborts_to_unstructured_returns_in_entry_points(
             // HACK(eddyb) this allows accessing the `DataInst` iterator while
             // mutably borrowing other parts of `FuncDefBody`.
             let func_at_block_insts = FuncAt {
-                control_nodes: &EntityDefs::new(),
-                control_regions: &EntityDefs::new(),
+                nodes: &EntityDefs::new(),
+                regions: &EntityDefs::new(),
                 data_insts: &func_def_body.data_insts,
 
                 position: *block_insts,
@@ -227,7 +226,7 @@ pub fn convert_custom_aborts_to_unstructured_returns_in_entry_points(
                 let data_inst_def = func_at_inst.def();
                 (
                     func_at_inst,
-                    match cx[data_inst_def.form].kind {
+                    match data_inst_def.kind {
                         DataInstKind::SpvExtInst { ext_set, inst }
                             if ext_set == custom_ext_inst_set =>
                         {
@@ -409,13 +408,10 @@ pub fn convert_custom_aborts_to_unstructured_returns_in_entry_points(
                         fmt += "\n";
 
                         let abort_inst_def = &mut func_def_body.data_insts[abort_inst];
-                        abort_inst_def.form = cx.intern(DataInstFormDef {
-                            kind: DataInstKind::SpvExtInst {
-                                ext_set: cx.intern("NonSemantic.DebugPrintf"),
-                                inst: 1,
-                            },
-                            output_type: cx[abort_inst_def.form].output_type,
-                        });
+                        abort_inst_def.kind = DataInstKind::SpvExtInst {
+                            ext_set: cx.intern("NonSemantic.DebugPrintf"),
+                            inst: 1,
+                        };
                         abort_inst_def.inputs = [Value::Const(mk_const_str(cx.intern(fmt)))]
                             .into_iter()
                             .chain(message_debug_printf_args.iter().copied())

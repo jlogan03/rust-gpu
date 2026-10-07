@@ -10,9 +10,9 @@ use smallvec::SmallVec;
 use spirt::func_at::FuncAt;
 use spirt::visit::{InnerVisit, Visitor};
 use spirt::{
-    Attr, AttrSet, AttrSetDef, Const, ConstKind, Context, ControlNode, ControlNodeKind,
-    DataInstDef, DataInstForm, DataInstKind, Diag, DiagLevel, ExportKey, Exportee, Func, FuncDecl,
-    GlobalVar, InternedStr, Module, Type, Value, spv,
+    Attr, AttrSet, AttrSetDef, Const, ConstKind, Context, DataInstDef, DataInstKind, Diag,
+    DiagLevel, ExportKey, Exportee, Func, FuncDecl, GlobalVar, InternedStr, Module, Node, NodeKind,
+    Type, Value, spv,
 };
 use std::marker::PhantomData;
 use std::{mem, str};
@@ -204,21 +204,16 @@ impl SpanRegenerator<'_> {
     fn spirt_attrs_to_rustc_span(&mut self, cx: &Context, attrs: AttrSet) -> Option<Span> {
         let attrs_def = &cx[attrs];
         attrs_def
-            .attrs
-            .iter()
-            .find_map(|attr| match attr {
-                &Attr::SpvDebugLine {
-                    file_path,
-                    line,
-                    col,
-                } => self.src_loc_to_rustc(SrcLocDecoration {
-                    file_name: &cx[file_path.0],
+            .dbg_src_loc()
+            .and_then(|loc| {
+                let (line, col) = loc.start_line_col;
+                self.src_loc_to_rustc(SrcLocDecoration {
+                    file_name: &cx[loc.file_path],
                     line_start: line,
                     line_end: line,
                     col_start: col,
                     col_end: col,
-                }),
-                _ => None,
+                })
             })
             .or_else(|| {
                 self.src_loc_to_rustc(
@@ -245,7 +240,7 @@ impl UseOrigin<'_> {
                     let wk = &super::SpvSpecWithExtras::get().well_known;
 
                     // FIXME(eddyb) deduplicate with `spirt_passes::diagnostics`.
-                    let custom_op = match cx[debug_inst_def.form].kind {
+                    let custom_op = match debug_inst_def.kind {
                         DataInstKind::SpvExtInst {
                             ext_set,
                             inst: ext_inst,
@@ -519,11 +514,6 @@ impl<'a> Visitor<'a> for DiagnosticReporter<'a> {
             }
         }
     }
-    fn visit_data_inst_form_use(&mut self, data_inst_form: DataInstForm) {
-        // NOTE(eddyb) this contains no deduplication because each `DataInstDef`
-        // will have any diagnostics reported separately.
-        self.visit_data_inst_form_def(&self.cx[data_inst_form]);
-    }
 
     fn visit_global_var_use(&mut self, gv: GlobalVar) {
         if self.seen_global_vars.insert(gv) {
@@ -564,21 +554,18 @@ impl<'a> Visitor<'a> for DiagnosticReporter<'a> {
         let extra = self.use_stack.len() - original_use_stack_len;
         if extra > 0 {
             // HACK(eddyb) synthesize a diagnostic to report right away.
-            self.report_from_attrs(
-                AttrSet::default().append_diag(
-                    self.cx,
-                    Diag::bug([format!(
-                        "{extra} extraneous `use_stack` frame(s) found \
+            self.report_from_attrs(AttrSet::default().reintern_with(self.cx, |attrs| {
+                attrs.push_diag(Diag::bug([format!(
+                    "{extra} extraneous `use_stack` frame(s) found \
                          (missing `PopInlinedCallFrame`?)"
-                    )
-                    .into()]),
-                ),
-            );
+                )
+                .into()]));
+            }));
         }
         self.use_stack.truncate(original_use_stack_len);
     }
 
-    fn visit_control_node_def(&mut self, func_at_control_node: FuncAt<'a, ControlNode>) {
+    fn visit_node_def(&mut self, func_at_control_node: FuncAt<'a, Node>) {
         let original_use_stack_len = self.use_stack.len();
 
         func_at_control_node.inner_visit_with(self);
@@ -587,14 +574,14 @@ impl<'a> Visitor<'a> for DiagnosticReporter<'a> {
         // `PushInlinedCallFrame` without matching `PopInlinedCallFrame`.
         self.use_stack.truncate(original_use_stack_len);
 
-        // HACK(eddyb) this relies on the fact that `ControlNodeKind::Block` maps
+        // HACK(eddyb) this relies on the fact that `NodeKind::Block` maps
         // to one original SPIR-V block, which may not necessarily be true, and
         // steps should be taken elsewhere to explicitly unset debuginfo, instead
         // of relying on the end of a SPIR-V block implicitly unsetting it all.
         // NOTE(eddyb) allowing debuginfo to apply *outside* of a `Block` could
         // be useful in allowing *some* structured control-flow to have debuginfo,
         // but that would likely require more work on the SPIR-T side.
-        if let ControlNodeKind::Block { .. } = func_at_control_node.def().kind {
+        if let NodeKind::Block { .. } = func_at_control_node.def().kind {
             match self.use_stack.last_mut() {
                 Some(UseOrigin::IntraFunc {
                     last_debug_src_loc_inst,
@@ -623,7 +610,7 @@ impl<'a> Visitor<'a> for DiagnosticReporter<'a> {
                 if let DataInstKind::SpvExtInst {
                     ext_set,
                     inst: ext_inst,
-                } = self.cx[data_inst_def.form].kind
+                } = data_inst_def.kind
                     && ext_set == self.custom_ext_inst_set
                 {
                     match CustomOp::decode(ext_inst) {
@@ -670,13 +657,15 @@ impl<'a> Visitor<'a> for DiagnosticReporter<'a> {
                                         } else {
                                             // HACK(eddyb) synthesize a diagnostic to report right away.
                                             self.report_from_attrs(
-                                                AttrSet::default().append_diag(
+                                                AttrSet::default().reintern_with(
                                                     self.cx,
-                                                    Diag::bug([
-                                                        "`PopInlinedCallFrame` without an \
+                                                    |attrs| {
+                                                        attrs.push_diag(Diag::bug([
+                                                            "`PopInlinedCallFrame` without an \
                                                              inlined call frame in `use_stack`"
-                                                            .into(),
-                                                    ]),
+                                                                .into(),
+                                                        ]));
+                                                    },
                                                 ),
                                             );
                                         }
@@ -692,7 +681,7 @@ impl<'a> Visitor<'a> for DiagnosticReporter<'a> {
             _ => unreachable!(),
         }
 
-        if let DataInstKind::FuncCall(func) = self.cx[data_inst_def.form].kind {
+        if let DataInstKind::FuncCall(func) = data_inst_def.kind {
             // HACK(eddyb) visit `func` early, to control its `use_stack`, with
             // the later visit from `inner_visit_with` ignored as a duplicate.
             let old_origin = replace_origin(self, IntraFuncUseOrigin::CallCallee);
