@@ -185,7 +185,7 @@ impl<'a, 'tcx> IntrinsicCallBuilderMethods<'tcx> for Builder<'a, 'tcx> {
                 let ln = self.gl_op(GLOp::Log, ret_ty, [args[0].immediate()]);
                 self.fmul(mul, ln)
             }
-            sym::fmaf32 | sym::fmaf64 | sym::fmaf128 => self.gl_op(
+            sym::fmaf16 | sym::fmaf32 | sym::fmaf64 | sym::fmaf128 => self.gl_op(
                 GLOp::Fma,
                 ret_ty,
                 [
