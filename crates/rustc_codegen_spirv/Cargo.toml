@@ -56,7 +56,7 @@ rustc-demangle = "0.1.21"
 sanitize-filename = "0.6.0"
 smallvec = { version = "1.6.1", features = ["const_generics", "const_new", "union"] }
 # spirt = "0.4.0"
-spirt = { git = "https://github.com/rust-gpu/spirt", rev = "e8757adba8d14068a7bf1b3bc9f24cac982f4bd3" }
+spirt = { git = "https://github.com/jlogan03/spirt", branch = "jlogan/float-flags" }
 spirv-tools.workspace = true
 lazy_static = "1.4.0"
 itertools = "0.14.0"

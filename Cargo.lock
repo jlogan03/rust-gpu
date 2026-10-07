@@ -4598,7 +4598,7 @@ dependencies = [
 [[package]]
 name = "spirt"
 version = "0.4.0"
-source = "git+https://github.com/rust-gpu/spirt?rev=e8757adba8d14068a7bf1b3bc9f24cac982f4bd3#e8757adba8d14068a7bf1b3bc9f24cac982f4bd3"
+source = "git+https://github.com/jlogan03/spirt?branch=jlogan%2Ffloat-flags#e0ceefa3c0860dbec194164cf906e36502873f24"
 dependencies = [
  "arrayvec",
  "bytemuck",

@@ -209,22 +209,13 @@ pub fn link(
 
     // FIXME(eddyb) deduplicate with `SpirtDumpGuard`.
     let dump_spv_and_spirt = |spv_module: &Module, dump_file_path_stem: PathBuf| {
-        let spv_words = spv_module.assemble();
+        let (spv_words, spirt_module_or_err, _) =
+            spv_module_to_spv_words_and_spirt_module(spv_module);
         std::fs::write(
             dump_file_path_stem.with_extension("spv"),
             spirv_tools::binary::from_binary(&spv_words),
         )
         .unwrap();
-
-        // SPIR-T cannot represent execution modes with ID operands.
-        // Omit these modes from text and HTML dumps. Keep the binary and original module intact.
-        // Float flags do not affect the control-flow representation, so these dumps
-        // still show the same control flow.
-        let mut spirt_input = spv_module.clone();
-        spirt_input
-            .execution_modes
-            .retain(|inst| inst.class.opcode != Op::ExecutionModeId);
-        let (_, spirt_module_or_err, _) = spv_module_to_spv_words_and_spirt_module(&spirt_input);
 
         // FIXME(eddyb) reify SPIR-V -> SPIR-T errors so they're easier to debug.
         if let Ok(mut module) = spirt_module_or_err {
@@ -314,8 +305,6 @@ pub fn link(
         let _timer = sess.timer("link_find_pairs");
         import_export_link::run(opts, sess, &mut output)?;
     }
-
-    let float_policies = float_controls::take_policies(&mut output);
 
     {
         let _timer = sess.timer("link_dce-post-link");
@@ -640,7 +629,7 @@ pub fn link(
         };
     }
 
-    float_controls::restore_policies(&mut output, float_policies);
+    float_controls::expand_policies(&mut output);
 
     // Ensure that no references remain, to our custom "extended instruction set".
     for inst in &output.ext_inst_imports {
