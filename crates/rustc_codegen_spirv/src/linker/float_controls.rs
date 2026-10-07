@@ -9,11 +9,18 @@ use rspirv::dr::{Instruction, Module, Operand};
 use rspirv::spirv::{Capability, ExecutionMode, ExecutionModel, Op};
 use std::collections::{BTreeMap, HashMap, HashSet};
 
+pub(super) struct Policy {
+    entry_name: String,
+    execution_model: ExecutionModel,
+    // Codegen emits zero for `rust_math` and `ALGEBRAIC_MATH_FLAGS` for `fast_math`.
+    flags: u32,
+}
+
 // SPIR-T 0.4 cannot lower execution modes with ID operands.
 // Its structurization and layout passes do not transform floating-point arithmetic.
 // Save the policy with the entry-point name across these passes.
 // Emit the modes before SPIRV-Tools optimizes arithmetic or validates the module.
-pub(super) fn take_policies(module: &mut Module) -> Vec<(String, ExecutionModel, u32)> {
+pub(super) fn take_policies(module: &mut Module) -> Vec<Policy> {
     let mut policies = Vec::new();
     module.execution_modes.retain(|mode| {
         if mode.operands.get(1) != Some(&Operand::ExecutionMode(ExecutionMode::FPFastMathDefault)) {
@@ -36,18 +43,18 @@ pub(super) fn take_policies(module: &mut Module) -> Vec<(String, ExecutionModel,
         } else {
             constant.operands[0].unwrap_literal_bit32()
         };
-        policies.push((
-            entry.operands[2].unwrap_literal_string().to_owned(),
-            entry.operands[0].unwrap_execution_model(),
+        policies.push(Policy {
+            entry_name: entry.operands[2].unwrap_literal_string().to_owned(),
+            execution_model: entry.operands[0].unwrap_execution_model(),
             flags,
-        ));
+        });
         false
     });
     policies
 }
 
 /// Emit final execution modes directly from the policies saved before SPIR-T.
-pub(super) fn restore_policies(module: &mut Module, policies: Vec<(String, ExecutionModel, u32)>) {
+pub(super) fn restore_policies(module: &mut Module, policies: Vec<Policy>) {
     if policies.is_empty() {
         return;
     }
@@ -55,7 +62,7 @@ pub(super) fn restore_policies(module: &mut Module, policies: Vec<(String, Execu
     // Include floats loaded through pointers and composites, beyond the entry function's result types.
     let mut edges: HashMap<u32, Vec<u32>> = HashMap::new();
     let mut floats = HashMap::new();
-    for inst in module.all_inst_iter() {
+    for inst in &module.types_global_values {
         if let Some(id) = inst.result_id {
             let deps = edges.entry(id).or_default();
             deps.extend(inst.result_type);
@@ -69,14 +76,13 @@ pub(super) fn restore_policies(module: &mut Module, policies: Vec<(String, Execu
         }
     }
     // A function's signature omits types used only in its body.
-    // Connect the function to all its instructions, including stores and calls.
-    // These connections let the traversal find every reachable use of floating-point values.
+    // Connect each function to the types, globals, and callees that its instructions use.
+    // Local values need no separate edges because the function includes their dependencies.
     for function in &module.functions {
         let deps = edges
             .entry(function.def.as_ref().unwrap().result_id.unwrap())
             .or_default();
         for inst in function.all_inst_iter() {
-            deps.extend(inst.result_id);
             deps.extend(inst.result_type);
             deps.extend(inst.operands.iter().filter_map(|op| match op {
                 Operand::IdRef(id) => Some(*id),
@@ -86,20 +92,20 @@ pub(super) fn restore_policies(module: &mut Module, policies: Vec<(String, Execu
     }
     let mut builder = rspirv::dr::Builder::new_from_module(std::mem::take(module));
     let mut capabilities = Vec::new();
-    for (name, model, flags) in policies {
+    for policy in policies {
         // Find the entry point's ID in the module that SPIR-T produced.
         let entry = builder
             .module_ref()
             .entry_points
             .iter()
             .find(|entry| {
-                entry.operands[2].unwrap_literal_string() == name
-                    && entry.operands[0] == Operand::ExecutionModel(model)
+                entry.operands[2].unwrap_literal_string() == policy.entry_name
+                    && entry.operands[0] == Operand::ExecutionModel(policy.execution_model)
             })
             .unwrap()
             .operands[1]
             .unwrap_id_ref();
-        let fast = flags != 0;
+        let fast = policy.flags != 0;
         // Collect one scalar type for each reachable float width.
         // `BTreeMap` orders the emitted modes by width, regardless of the order of traversal.
         let mut pending = vec![entry];
@@ -123,7 +129,7 @@ pub(super) fn restore_policies(module: &mut Module, policies: Vec<(String, Execu
         // Create the constant only if there are final modes to emit.
         // Reuse the constant for all float widths of this entry point.
         let uint = builder.type_int(32, 0);
-        let flags = builder.constant_bit32(uint, flags);
+        let flags = builder.constant_bit32(uint, policy.flags);
         for (width, ty) in widths {
             builder.module_mut().execution_modes.push(Instruction::new(
                 Op::ExecutionModeId,

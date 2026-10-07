@@ -133,18 +133,26 @@ impl<'tcx> CodegenCx<'tcx> {
         );
         // Only `rust_math` and `fast_math` configure the Vulkan floating-point environment.
         // `compat_math` and entry points without a policy keep the target defaults.
-        if matches!(entry.math_mode, Some(MathMode::Rust | MathMode::Fast))
-            && self
-                .tcx
-                .sess
-                .target
-                .options
-                .env
-                .desc()
-                .starts_with("vulkan")
-        {
-            let fast = matches!(entry.math_mode, Some(MathMode::Fast));
-            let policy = if fast { "`fast_math`" } else { "`rust_math`" };
+        let is_vulkan = self
+            .tcx
+            .sess
+            .target
+            .options
+            .env
+            .desc()
+            .starts_with("vulkan");
+        let policy = match entry.math_mode {
+            None | Some(MathMode::Compat) => None,
+            Some(_) if !is_vulkan => {
+                self.tcx
+                    .dcx()
+                    .span_err(span, "`rust_math` and `fast_math` require a Vulkan target");
+                None
+            }
+            Some(MathMode::Rust) => Some(("`rust_math`", false)),
+            Some(MathMode::Fast) => Some(("`fast_math`", true)),
+        };
+        if let Some((policy, fast)) = policy {
             // Policies apply to every float width. Explicit settings must agree at every width.
             // `SignedZeroInfNanPreserve` and `ContractionOff` cannot coexist with
             // `FPFastMathDefault`, even when its flags express the same constraints.
@@ -197,13 +205,6 @@ impl<'tcx> CodegenCx<'tcx> {
                         Operand::IdRef(flags),
                     ],
                 ));
-        } else if matches!(
-            entry.math_mode,
-            Some(crate::attr::MathMode::Rust | crate::attr::MathMode::Fast)
-        ) {
-            self.tcx
-                .dcx()
-                .span_err(span, "`rust_math` and `fast_math` require a Vulkan target");
         }
         let mut emit = self.emit_global();
         entry.execution_modes.iter().for_each(|mode| {
