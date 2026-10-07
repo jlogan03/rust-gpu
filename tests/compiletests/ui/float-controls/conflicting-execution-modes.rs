@@ -3,7 +3,7 @@
 
 use spirv_std::spirv;
 
-// Check both explicit policies across floating-point widths.
+// Check both policies for conflicts at each float width (16, 32, and 64 bits).
 #[spirv(compute(
     threads(1),
     rust_math,

@@ -32,21 +32,3 @@
         %u32 = OpTypeInt 32 0
  %u32_196620 = OpConstant %u32 196620
       %u32_0 = OpConstant %u32 0
-          %1 = OpFunction %void None %12
-         %15 = OpLabel
-         %16 = OpLoad %f32 %input
-         %17 = OpFAdd %f32 %16 %f32_1
-         %18 = OpFSub %f32 %17 %16
-               OpStore %output %18
-               OpNoLine
-               OpReturn
-               OpFunctionEnd
-          %4 = OpFunction %void None %12
-         %19 = OpLabel
-         %20 = OpLoad %f32 %input
-         %21 = OpFAdd %f32 %20 %f32_1
-         %22 = OpFSub %f32 %21 %20
-               OpStore %output %22
-               OpNoLine
-               OpReturn
-               OpFunctionEnd

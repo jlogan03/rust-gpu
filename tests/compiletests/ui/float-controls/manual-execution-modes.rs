@@ -8,6 +8,7 @@
 use spirv_std::spirv;
 
 // `compat_math` preserves the floating-point environment that the attributes request.
+// Each execution mode selects the 64-bit float width.
 #[spirv(compute(
     threads(1),
     compat_math,

@@ -248,10 +248,17 @@ fn without_header_eq(output: Module, expected: &str) {
 #[test]
 fn split_float_controls_extensions() {
     use rspirv::binary::Assemble;
+    use rspirv::spirv::FPFastMathMode;
 
     // Splitting must retain the extensions that each entry point requires.
     // Naga must accept the compatibility output.
-    let mut source = r#"
+    let algebraic_flags = (FPFastMathMode::NSZ
+        | FPFastMathMode::ALLOW_RECIP
+        | FPFastMathMode::ALLOW_CONTRACT
+        | FPFastMathMode::ALLOW_REASSOC)
+        .bits();
+    let mut source = format!(
+        r#"
         OpCapability Shader
         OpCapability FloatControls2
         OpCapability RoundingModeRTZ
@@ -267,7 +274,7 @@ fn split_float_controls_extensions() {
         OpExecutionMode %fast OriginUpperLeft
         OpExecutionMode %compat OriginUpperLeft
         OpExecutionMode %legacy OriginUpperLeft
-        OpExecutionModeId %strict FPFastMathDefault %float %zero
+        OpExecutionModeId %strict FPFastMathDefault %float %no_fast_math
         OpExecutionModeId %fast FPFastMathDefault %float %algebraic
         OpExecutionMode %legacy RoundingModeRTZ 32
         OpExecutionMode %legacy SignedZeroInfNanPreserve 32
@@ -276,14 +283,15 @@ fn split_float_controls_extensions() {
         %fn = OpTypeFunction %void
         %float = OpTypeFloat 32
         %uint = OpTypeInt 32 0
-        %zero = OpConstant %uint 0
-        %algebraic = OpConstant %uint 196620
+        %no_fast_math = OpConstant %uint 0
+        %algebraic = OpConstant %uint {algebraic_flags}
         %one = OpConstant %float 1
         %ptr_float = OpTypePointer Output %float
         %output = OpVariable %ptr_float Output
     "#
-    .to_string();
-    for name in ["strict", "fast", "compat", "legacy"] {
+    );
+    let entry_names = ["strict", "fast", "compat", "legacy"];
+    for name in entry_names {
         source.push_str(&format!(
             "%{name} = OpFunction %void None %fn\n\
              %{name}_label = OpLabel\n\
@@ -297,6 +305,9 @@ fn split_float_controls_extensions() {
         .join(format!("rust-gpu-float-controls-{}", std::process::id()));
     std::fs::create_dir_all(dump_dir.parent().unwrap()).unwrap();
     std::fs::create_dir(&dump_dir).unwrap();
+    let _cleanup = rustc_data_structures::defer(|| {
+        let _ = std::fs::remove_dir_all(&dump_dir);
+    });
     let result = link_modules_with_linker_opts(
         &[&binary],
         &super::Options {
@@ -313,7 +324,7 @@ fn split_float_controls_extensions() {
     else {
         panic!("expected split modules");
     };
-    assert_eq!(modules.len(), 4);
+    assert_eq!(modules.len(), entry_names.len());
     for (name, module) in modules.into_values() {
         let dump = dump_dir.join(format!(".{name}"));
         for extension in ["spv", "spirt", "spirt.html"] {
@@ -355,7 +366,6 @@ fn split_float_controls_extensions() {
                 .expect("Naga must accept compatibility output");
         }
     }
-    std::fs::remove_dir_all(dump_dir).unwrap();
 }
 
 #[test]

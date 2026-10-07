@@ -9,9 +9,18 @@
 
 use spirv_std::spirv;
 
+// The snapshot's fast-math mask 196620 is NSZ | AllowRecip | AllowContract | AllowReassoc.
+// A zero mask disables these permissions.
+// Each entry point must retain its policy when it calls the same function.
 #[inline(never)]
 fn shared(a: f32, b: f32) -> f32 {
     ((a + b) + b) - a
+}
+
+// `strict` must apply its policy to `f64`, which occurs only in this callee's body.
+#[inline(never)]
+fn wide_add(a: f32, b: f32) -> f32 {
+    (a as f64 + b as f64) as f32
 }
 
 #[spirv(compute(threads(1), compat_math))]
@@ -22,7 +31,7 @@ pub fn legacy(#[spirv(storage_buffer, descriptor_set = 0, binding = 0)] data: &m
 #[spirv(compute(threads(1), rust_math))]
 pub fn strict(#[spirv(storage_buffer, descriptor_set = 0, binding = 0)] data: &mut [f32; 2]) {
     data[0] = shared(data[0], data[1]);
-    data[1] = data[0] + data[1];
+    data[1] = wide_add(data[0], data[1]);
 }
 
 #[spirv(compute(threads(1), fast_math))]
