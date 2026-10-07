@@ -1,60 +1,21 @@
 //! Preserve floating-point policies through linking.
 //!
-//! Save entry-point defaults outside the module before SPIR-T runs.
-//! After SPIR-T, apply those defaults to every reachable float width.
+//! After SPIR-T, apply entry-point defaults to every reachable float width.
 //! After module splitting and DCE, remove float-control capabilities
 //! that the remaining code does not need.
 
 use rspirv::dr::{Instruction, Module, Operand};
-use rspirv::spirv::{Capability, ExecutionMode, ExecutionModel, Op};
+use rspirv::spirv::{Capability, ExecutionMode, Op};
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-pub(super) struct Policy {
-    entry_name: String,
-    execution_model: ExecutionModel,
-    // Codegen emits zero for `rust_math` and `ALGEBRAIC_MATH_FLAGS` for `fast_math`.
-    flags: u32,
-}
-
-// SPIR-T 0.4 cannot lower execution modes with ID operands.
-// Its structurization and layout passes do not transform floating-point arithmetic.
-// Save the policy with the entry-point name across these passes.
-// Emit the modes before SPIRV-Tools optimizes arithmetic or validates the module.
-pub(super) fn take_policies(module: &mut Module) -> Vec<Policy> {
-    let mut policies = Vec::new();
-    module.execution_modes.retain(|mode| {
-        if mode.operands.get(1) != Some(&Operand::ExecutionMode(ExecutionMode::FPFastMathDefault)) {
-            return true;
-        }
-        // SPIR-T can change IDs. Identify the entry point by its name and execution model.
-        // Read the flag constant while the module still contains it.
-        let entry = module
-            .entry_points
-            .iter()
-            .find(|entry| entry.operands[1] == mode.operands[0])
-            .unwrap();
-        let constant = module
-            .types_global_values
-            .iter()
-            .find(|inst| inst.result_id == Some(mode.operands[3].unwrap_id_ref()))
-            .unwrap();
-        let flags = if constant.class.opcode == Op::ConstantNull {
-            0
-        } else {
-            constant.operands[0].unwrap_literal_bit32()
-        };
-        policies.push(Policy {
-            entry_name: entry.operands[2].unwrap_literal_string().to_owned(),
-            execution_model: entry.operands[0].unwrap_execution_model(),
-            flags,
-        });
-        false
-    });
-    policies
-}
-
-/// Emit final execution modes directly from the policies saved before SPIR-T.
-pub(super) fn restore_policies(module: &mut Module, policies: Vec<Policy>) {
+/// Apply each entry-point policy to every float width that its code uses after SPIR-T.
+pub(super) fn expand_policies(module: &mut Module) {
+    let policies: Vec<_> = module
+        .execution_modes
+        .extract_if(.., |mode| {
+            mode.operands.get(1) == Some(&Operand::ExecutionMode(ExecutionMode::FPFastMathDefault))
+        })
+        .collect();
     if policies.is_empty() {
         return;
     }
@@ -90,22 +51,18 @@ pub(super) fn restore_policies(module: &mut Module, policies: Vec<Policy>) {
             }));
         }
     }
-    let mut builder = rspirv::dr::Builder::new_from_module(std::mem::take(module));
     let mut capabilities = Vec::new();
     for policy in policies {
-        // Find the entry point's ID in the module that SPIR-T produced.
-        let entry = builder
-            .module_ref()
-            .entry_points
+        let entry = policy.operands[0].unwrap_id_ref();
+        let flags = policy.operands[3].unwrap_id_ref();
+        let constant = module
+            .types_global_values
             .iter()
-            .find(|entry| {
-                entry.operands[2].unwrap_literal_string() == policy.entry_name
-                    && entry.operands[0] == Operand::ExecutionModel(policy.execution_model)
-            })
-            .unwrap()
-            .operands[1]
-            .unwrap_id_ref();
-        let fast = policy.flags != 0;
+            .find(|inst| inst.result_id == Some(flags))
+            .unwrap();
+        // Codegen emits zero for `rust_math` and `ALGEBRAIC_MATH_FLAGS` for `fast_math`.
+        let fast = constant.class.opcode != Op::ConstantNull
+            && constant.operands[0].unwrap_literal_bit32() != 0;
         // Collect one scalar type for each reachable float width.
         // `BTreeMap` orders the emitted modes by width, regardless of the order of traversal.
         let mut pending = vec![entry];
@@ -122,26 +79,10 @@ pub(super) fn restore_policies(module: &mut Module, policies: Vec<Policy>) {
                 pending.extend(deps);
             }
         }
-        if widths.is_empty() {
-            continue;
-        }
-        // `FPFastMathDefault` references a constant ID.
-        // Create the constant only if there are final modes to emit.
-        // Reuse the constant for all float widths of this entry point.
-        let uint = builder.type_int(32, 0);
-        let flags = builder.constant_bit32(uint, policy.flags);
         for (width, ty) in widths {
-            builder.module_mut().execution_modes.push(Instruction::new(
-                Op::ExecutionModeId,
-                None,
-                None,
-                vec![
-                    Operand::IdRef(entry),
-                    Operand::ExecutionMode(ExecutionMode::FPFastMathDefault),
-                    Operand::IdRef(ty),
-                    Operand::IdRef(flags),
-                ],
-            ));
+            let mut mode = policy.clone();
+            mode.operands[2] = Operand::IdRef(ty);
+            module.execution_modes.push(mode);
             // Denormal handling and rounding apply to the entry point.
             // Fast-math permissions apply to individual operations.
             // Both policies round to nearest, with ties to even (RTE).
@@ -162,15 +103,14 @@ pub(super) fn restore_policies(module: &mut Module, policies: Vec<Policy>) {
                     Operand::ExecutionMode(execution_mode),
                     Operand::LiteralBit32(width),
                 ];
-                if builder
-                    .module_ref()
+                if module
                     .execution_modes
                     .iter()
                     .any(|inst| inst.operands == operands)
                 {
                     continue;
                 }
-                builder.module_mut().execution_modes.push(Instruction::new(
+                module.execution_modes.push(Instruction::new(
                     Op::ExecutionMode,
                     None,
                     None,
@@ -179,7 +119,6 @@ pub(super) fn restore_policies(module: &mut Module, policies: Vec<Policy>) {
             }
         }
     }
-    *module = builder.module();
     // Declare the requirements of the emitted modes.
     // Do not duplicate declarations in the linked module.
     if !capabilities.is_empty()

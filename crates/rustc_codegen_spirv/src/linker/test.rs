@@ -327,22 +327,20 @@ fn split_float_controls_extensions() {
     assert_eq!(modules.len(), entry_names.len());
     for (name, module) in modules.into_values() {
         let dump = dump_dir.join(format!(".{name}"));
-        for extension in ["spv", "spirt", "spirt.html"] {
-            assert!(
-                !std::fs::read(dump.with_extension(extension))
-                    .unwrap()
-                    .is_empty()
-            );
+        // All dump formats must retain execution modes with ID operands.
+        let has_policy = matches!(name.as_str(), "strict" | "fast");
+        for extension in ["spirt", "spirt.html"] {
+            let text = std::fs::read_to_string(dump.with_extension(extension)).unwrap();
+            assert!(!text.is_empty());
+            assert_eq!(text.contains("FPFastMathDefault"), has_policy);
         }
-        // The text and HTML dumps omit execution modes with ID operands.
-        // The binary must retain these modes.
         let dumped = load(&std::fs::read(dump.with_extension("spv")).unwrap());
         assert_eq!(
             dumped
                 .execution_modes
                 .iter()
                 .any(|inst| inst.class.opcode == rspirv::spirv::Op::ExecutionModeId),
-            matches!(name.as_str(), "strict" | "fast")
+            has_policy
         );
         let words = module.assemble();
         validate(&words);
