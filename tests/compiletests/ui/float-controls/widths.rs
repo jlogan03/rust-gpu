@@ -9,7 +9,7 @@
 
 use spirv_std::spirv;
 
-// Reuse the explicit f16 settings and add the policy's settings for f64.
+// Reuse the explicit `f16` settings. Add the policy's settings for `f64`.
 #[spirv(compute(threads(1), rust_math, denorm_preserve = 16, rounding_mode_rte = 16))]
 pub fn mixed(
     #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] half: &mut f16,

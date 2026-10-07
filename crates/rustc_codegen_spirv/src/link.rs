@@ -546,9 +546,9 @@ fn create_archive(files: &[&Path], metadata: &[u8], out_filename: &Path) {
 pub fn with_rspirv_loader<E>(
     f: impl FnOnce(&mut dyn rspirv::binary::Consumer) -> Result<(), E>,
 ) -> Result<rspirv::dr::Module, E> {
-    // rspirv 0.13's loader does not classify OpExecutionModeId as a global.
-    // Keep ID operands and the opcode intact rather than converting to the
-    // literal-operand OpExecutionMode (which breaks ID remapping and DCE).
+    // The rspirv 0.13 loader does not classify `OpExecutionModeId` as a global instruction.
+    // Preserve the opcode and ID operands. Converting to `OpExecutionMode`
+    // would treat IDs as literals and break ID remapping and DCE.
     struct Loader {
         inner: rspirv::dr::Loader,
         id_modes: Vec<rspirv::dr::Instruction>,

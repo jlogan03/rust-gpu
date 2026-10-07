@@ -9,7 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed 🛠
 
-- Add opt-in Vulkan `rust_math` and `fast_math` floating-point policies, with `compat_math` preserving existing behavior. See [floating-point policy attributes](docs/src/attributes.md#floating-point-policy-vulkan).
+- Add opt-in Vulkan floating-point policies: `rust_math` and `fast_math`.
+  Use `compat_math` to preserve existing behavior.
+  See [floating-point policy attributes](docs/src/attributes.md#floating-point-policy-vulkan).
 
 - [PR#637](https://github.com/Rust-GPU/rust-gpu/pull/637) upgraded `bitflags` dependency from 1.x to 2.x
  

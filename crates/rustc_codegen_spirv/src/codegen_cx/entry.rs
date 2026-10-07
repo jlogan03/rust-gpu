@@ -131,8 +131,8 @@ impl<'tcx> CodegenCx<'tcx> {
             name,
             entry.execution_model,
         );
-        // Only explicit Vulkan policies configure the floating-point environment.
-        // Compatibility mode and unannotated entries retain the target defaults.
+        // Only `rust_math` and `fast_math` configure the Vulkan floating-point environment.
+        // `compat_math` and entry points without a policy keep the target defaults.
         if matches!(entry.math_mode, Some(MathMode::Rust | MathMode::Fast))
             && self
                 .tcx
@@ -145,9 +145,9 @@ impl<'tcx> CodegenCx<'tcx> {
         {
             let fast = matches!(entry.math_mode, Some(MathMode::Fast));
             let policy = if fast { "`fast_math`" } else { "`rust_math`" };
-            // Policies apply to every float width, so an explicit setting must
-            // agree regardless of its width. The two legacy preservation modes
-            // cannot coexist with FPFastMathDefault even when its flags agree.
+            // Policies apply to every float width. Explicit settings must agree at every width.
+            // `SignedZeroInfNanPreserve` and `ContractionOff` cannot coexist with
+            // `FPFastMathDefault`, even when its flags express the same constraints.
             for mode in &entry.execution_modes {
                 let conflict = match mode.value.0 {
                     ExecutionMode::SignedZeroInfNanPreserve => Some("signed_zero_inf_nan_preserve"),
@@ -168,11 +168,11 @@ impl<'tcx> CodegenCx<'tcx> {
                     err.emit();
                 }
             }
-            // Seed the policy with f32. The linker expands it to the floating-point
-            // widths reachable from this entry point once imports are resolved.
+            // Set the initial policy for `f32`. After resolving imports, the linker
+            // applies the policy to every float width reachable from this entry point.
             let float = SpirvType::Float(32).def(span, self);
-            // fast_math grants the safe algebraic permissions, without assuming
-            // finite inputs. An explicit zero mask disables those permissions.
+            // `fast_math` permits safe algebraic transformations without assuming finite inputs.
+            // An explicit zero mask disables these permissions.
             let flags = if fast {
                 crate::attr::ALGEBRAIC_MATH_FLAGS
             } else {
@@ -183,7 +183,7 @@ impl<'tcx> CodegenCx<'tcx> {
             let mut emit = self.emit_global();
             emit.extension("SPV_KHR_float_controls2");
             emit.capability(rspirv::spirv::Capability::FloatControls2);
-            // rspirv's execution_mode_id helper incorrectly uses literal operands.
+            // The rspirv `execution_mode_id` helper incorrectly uses literal operands.
             emit.module_mut()
                 .execution_modes
                 .push(rspirv::dr::Instruction::new(

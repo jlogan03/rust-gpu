@@ -249,8 +249,8 @@ fn without_header_eq(output: Module, expected: &str) {
 fn split_float_controls_extensions() {
     use rspirv::binary::Assemble;
 
-    // Splitting must retain each entry's required extensions while making the
-    // compatibility output acceptable to Naga.
+    // Splitting must retain the extensions that each entry point requires.
+    // Naga must accept the compatibility output.
     let mut source = r#"
         OpCapability Shader
         OpCapability FloatControls2
@@ -323,7 +323,8 @@ fn split_float_controls_extensions() {
                     .is_empty()
             );
         }
-        // The readable dumps omit ID modes; the binary must retain them.
+        // The text and HTML dumps omit execution modes with ID operands.
+        // The binary must retain these modes.
         let dumped = load(&std::fs::read(dump.with_extension("spv")).unwrap());
         assert_eq!(
             dumped
@@ -346,12 +347,12 @@ fn split_float_controls_extensions() {
             matches!(name.as_str(), "strict" | "fast")
         );
         if name == "compat" {
-            // SPIR-V validation alone accepts unused extensions. Exercise the
-            // consumer that rejects these declarations even when unused.
+            // SPIR-V validation accepts unused extensions. Check the output with
+            // Naga, which rejects unsupported extensions even when no code uses them.
             #[cfg(feature = "naga")]
             naga::front::spv::Frontend::new(words.into_iter(), &Default::default())
                 .parse()
-                .expect("compatibility output must be accepted by Naga");
+                .expect("Naga must accept compatibility output");
         }
     }
     std::fs::remove_dir_all(dump_dir).unwrap();

@@ -7,7 +7,7 @@
 
 use spirv_std::spirv;
 
-// Compatibility mode leaves the manually requested float environment intact.
+// `compat_math` preserves the floating-point environment that the attributes request.
 #[spirv(compute(
     threads(1),
     compat_math,

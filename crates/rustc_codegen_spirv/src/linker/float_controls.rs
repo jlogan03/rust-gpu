@@ -1,26 +1,26 @@
-//! Preserve floating-point policies through the linker pipeline.
+//! Preserve floating-point policies through linking.
 //!
-//! Before SPIR-T, save entry-point defaults outside the module.
-//! After SPIR-T, expand those defaults
-//! to the reachable float widths. After module splitting and DCE, discard any
-//! float-control capabilities that the surviving code no longer needs.
+//! Save entry-point defaults outside the module before SPIR-T runs.
+//! After SPIR-T, apply those defaults to every reachable float width.
+//! After module splitting and DCE, remove float-control capabilities
+//! that the remaining code does not need.
 
 use rspirv::dr::{Instruction, Module, Operand};
 use rspirv::spirv::{Capability, ExecutionMode, ExecutionModel, Op};
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-// SPIR-T 0.4 cannot lower execution modes with ID operands. Its current
-// structurization/layout passes do not transform floating-point arithmetic.
-// Carry the entry policy by name across that pipeline, then materialize modes
-// before SPIRV-Tools performs any arithmetic optimization or validation.
+// SPIR-T 0.4 cannot lower execution modes with ID operands.
+// Its structurization and layout passes do not transform floating-point arithmetic.
+// Save the policy with the entry-point name across these passes.
+// Emit the modes before SPIRV-Tools optimizes arithmetic or validates the module.
 pub(super) fn take_policies(module: &mut Module) -> Vec<(String, ExecutionModel, u32)> {
     let mut policies = Vec::new();
     module.execution_modes.retain(|mode| {
         if mode.operands.get(1) != Some(&Operand::ExecutionMode(ExecutionMode::FPFastMathDefault)) {
             return true;
         }
-        // SPIR-T can change IDs. Preserve the entry's name and execution model
-        // as its identity, and decode the flag constant while it is still present.
+        // SPIR-T can change IDs. Identify the entry point by its name and execution model.
+        // Read the flag constant while the module still contains it.
         let entry = module
             .entry_points
             .iter()
@@ -51,8 +51,8 @@ pub(super) fn restore_policies(module: &mut Module, policies: Vec<(String, Execu
     if policies.is_empty() {
         return;
     }
-    // Follow value/type dependencies and calls, not just the entry function's
-    // result types. This includes floats loaded through pointers and composites.
+    // Follow value dependencies, type dependencies, and calls to find reachable float types.
+    // Include floats loaded through pointers and composites, beyond the entry function's result types.
     let mut edges: HashMap<u32, Vec<u32>> = HashMap::new();
     let mut floats = HashMap::new();
     for inst in module.all_inst_iter() {
@@ -68,9 +68,9 @@ pub(super) fn restore_policies(module: &mut Module, policies: Vec<(String, Execu
             }
         }
     }
-    // A function's signature alone misses types used only in its body. Connect
-    // the function to all its instructions, including stores and calls, so the
-    // traversal below includes every reachable use of floating-point values.
+    // A function's signature omits types used only in its body.
+    // Connect the function to all its instructions, including stores and calls.
+    // These connections let the traversal find every reachable use of floating-point values.
     for function in &module.functions {
         let deps = edges
             .entry(function.def.as_ref().unwrap().result_id.unwrap())
@@ -87,7 +87,7 @@ pub(super) fn restore_policies(module: &mut Module, policies: Vec<(String, Execu
     let mut builder = rspirv::dr::Builder::new_from_module(std::mem::take(module));
     let mut capabilities = Vec::new();
     for (name, model, flags) in policies {
-        // Recover the entry's current ID after SPIR-T has rewritten the module.
+        // Find the entry point's ID in the module that SPIR-T produced.
         let entry = builder
             .module_ref()
             .entry_points
@@ -100,8 +100,8 @@ pub(super) fn restore_policies(module: &mut Module, policies: Vec<(String, Execu
             .operands[1]
             .unwrap_id_ref();
         let fast = flags != 0;
-        // Gather one scalar type per reachable float width. BTreeMap keeps the
-        // emitted modes ordered by width regardless of dependency traversal order.
+        // Collect one scalar type for each reachable float width.
+        // `BTreeMap` orders the emitted modes by width, regardless of the order of traversal.
         let mut pending = vec![entry];
         let mut visited = HashSet::new();
         let mut widths = BTreeMap::new();
@@ -119,8 +119,9 @@ pub(super) fn restore_policies(module: &mut Module, policies: Vec<(String, Execu
         if widths.is_empty() {
             continue;
         }
-        // FPFastMathDefault references a constant ID. Create it only when there
-        // are final modes to emit, and reuse it for all widths of this entry.
+        // `FPFastMathDefault` references a constant ID.
+        // Create the constant only if there are final modes to emit.
+        // Reuse the constant for all float widths of this entry point.
         let uint = builder.type_int(32, 0);
         let flags = builder.constant_bit32(uint, flags);
         for (width, ty) in widths {
@@ -135,9 +136,10 @@ pub(super) fn restore_policies(module: &mut Module, policies: Vec<(String, Execu
                     Operand::IdRef(flags),
                 ],
             ));
-            // Denormal handling and rounding are entry-point settings, separate
-            // from operation-level fast-math permissions. Both policies use RTE;
-            // rust_math preserves subnormals, while fast_math flushes them.
+            // Denormal handling and rounding apply to the entry point.
+            // Fast-math permissions apply to individual operations.
+            // Both policies round to nearest, with ties to even (RTE).
+            // `rust_math` preserves subnormals. `fast_math` flushes subnormals to zero.
             let (denorm, capability) = if fast {
                 (
                     ExecutionMode::DenormFlushToZero,
@@ -148,8 +150,7 @@ pub(super) fn restore_policies(module: &mut Module, policies: Vec<(String, Execu
             };
             capabilities.extend([capability, Capability::RoundingModeRTE]);
             for execution_mode in [denorm, ExecutionMode::RoundingModeRTE] {
-                // Matching source attributes already provide this mode. Reuse
-                // them, comparing the width as well as the entry and mode.
+                // Reuse modes from source attributes when the entry point, mode, and width match.
                 let operands = vec![
                     Operand::IdRef(entry),
                     Operand::ExecutionMode(execution_mode),
@@ -173,8 +174,8 @@ pub(super) fn restore_policies(module: &mut Module, policies: Vec<(String, Execu
         }
     }
     *module = builder.module();
-    // Declare the requirements of the modes just emitted without duplicating
-    // declarations already present in the linked module.
+    // Declare the requirements of the emitted modes.
+    // Do not duplicate declarations in the linked module.
     if !capabilities.is_empty()
         && !module
             .extensions
@@ -202,8 +203,8 @@ pub(super) fn restore_policies(module: &mut Module, policies: Vec<(String, Execu
     }
 }
 
-/// After splitting and DCE, allow compatibility-only modules to shed requirements
-/// introduced by entry points that are no longer present.
+/// After splitting and DCE, remove requirements from entry points that no longer exist.
+/// This lets modules with only compatibility entry points avoid those requirements.
 pub(super) fn remove_unused_capabilities(module: &mut Module) {
     let has_mode = |mode| {
         module
@@ -211,8 +212,7 @@ pub(super) fn remove_unused_capabilities(module: &mut Module) {
             .iter()
             .any(|inst| inst.operands[1] == Operand::ExecutionMode(mode))
     };
-    // Either an entry-point default or an operation override still needs
-    // FloatControls2; checking execution modes alone would miss the latter.
+    // Retain `FloatControls2` for entry-point defaults or operation overrides.
     let controls2 = has_mode(ExecutionMode::FPFastMathDefault)
         || module.annotations.iter().any(|inst| {
             inst.operands.get(1)
@@ -236,9 +236,9 @@ pub(super) fn remove_unused_capabilities(module: &mut Module) {
             Capability::SignedZeroInfNanPreserve => preserve_special,
             _ => true,
         });
-    // Consumers such as Naga reject unsupported extensions even without any
-    // corresponding capabilities. The original extension also covers legacy
-    // RTZ and signed-zero/Inf/NaN modes, not just the modes our policies emit.
+    // Consumers such as Naga reject unsupported extensions even without corresponding capabilities.
+    // `SPV_KHR_float_controls` also covers the legacy RTZ and signed-zero/Inf/NaN modes.
+    // Retain the extension if the module uses these modes.
     module
         .extensions
         .retain(|inst| match inst.operands[0].unwrap_literal_string() {

@@ -14,7 +14,7 @@ use spirv_std::spirv;
 ))]
 pub fn strict_policy() {}
 
-// Attribute order must not affect conflict detection.
+// The order of attributes must not affect conflict detection.
 #[spirv(compute(
     threads(1),
     signed_zero_inf_nan_preserve = 64,

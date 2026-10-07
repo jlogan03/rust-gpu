@@ -216,10 +216,10 @@ pub fn link(
         )
         .unwrap();
 
-        // SPIR-T cannot represent execution modes with ID operands. Omit them
-        // only from the readable dumps, keeping the binary and real module intact.
-        // The control-flow representation does not depend on float flags, so
-        // omitting these modes preserves that debugging view.
+        // SPIR-T cannot represent execution modes with ID operands.
+        // Omit these modes from text and HTML dumps. Keep the binary and original module intact.
+        // Float flags do not affect the control-flow representation, so these dumps
+        // still show the same control flow.
         let mut spirt_input = spv_module.clone();
         spirt_input
             .execution_modes
