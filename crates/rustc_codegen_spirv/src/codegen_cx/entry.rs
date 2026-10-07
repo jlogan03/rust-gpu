@@ -191,20 +191,7 @@ impl<'tcx> CodegenCx<'tcx> {
             let mut emit = self.emit_global();
             emit.extension("SPV_KHR_float_controls2");
             emit.capability(rspirv::spirv::Capability::FloatControls2);
-            // The rspirv `execution_mode_id` helper incorrectly uses literal operands.
-            emit.module_mut()
-                .execution_modes
-                .push(rspirv::dr::Instruction::new(
-                    rspirv::spirv::Op::ExecutionModeId,
-                    None,
-                    None,
-                    vec![
-                        Operand::IdRef(stub.id),
-                        Operand::ExecutionMode(rspirv::spirv::ExecutionMode::FPFastMathDefault),
-                        Operand::IdRef(float),
-                        Operand::IdRef(flags),
-                    ],
-                ));
+            emit.execution_mode_id(stub.id, ExecutionMode::FPFastMathDefault, [float, flags]);
         }
         let mut emit = self.emit_global();
         entry.execution_modes.iter().for_each(|mode| {

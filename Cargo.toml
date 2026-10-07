@@ -83,8 +83,10 @@ semver = "1.0.26"
 dunce = "1.0.5"
 expect-test = "1.5.1"
 regex-lite = "0.1.9"
-spirv = { version = "0.4.0", features = ["serialize", "deserialize"] }
-rspirv = "0.13.0"
+# spirv = { version = "0.4.0", features = ["serialize", "deserialize"] }
+spirv = { git = "https://github.com/jlogan03/rspirv", branch = "jlogan/execution-mode-id-args", features = ["serialize", "deserialize"] }
+# rspirv = "0.13.0"
+rspirv = { git = "https://github.com/jlogan03/rspirv", branch = "jlogan/execution-mode-id-args" }
 rspirv2 = { version = "0.1.0", features = ["bytemuck"] }
 chrono = "0.4.45"
 

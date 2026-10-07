@@ -1689,7 +1689,7 @@ pub const RAY_FLAGS: &[(&str, RayFlags)] = &[
     ("CullOpaqueKHR", RayFlags::CULL_OPAQUE_KHR),
     ("CullNoOpaqueKHR", RayFlags::CULL_NO_OPAQUE_KHR),
     ("SkipTrianglesKHR", RayFlags::SKIP_TRIANGLES_KHR),
-    ("SkipAabBsKHR", RayFlags::SKIP_AAB_BS_KHR),
+    ("SkipAabBsKHR", RayFlags::SKIP_AABBS_KHR),
 ];
 pub const FRAGMENT_SHADING_RATE: &[(&str, FragmentShadingRate)] = &[
     ("VERTICAL2_PIXELS", FragmentShadingRate::VERTICAL2_PIXELS),

@@ -2947,7 +2947,7 @@ dependencies = [
  "once_cell",
  "petgraph",
  "rustc-hash 1.1.0",
- "spirv",
+ "spirv 0.4.0+sdk-1.4.341.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.19",
 ]
 
@@ -2973,7 +2973,7 @@ dependencies = [
  "once_cell",
  "petgraph",
  "rustc-hash 1.1.0",
- "spirv",
+ "spirv 0.4.0+sdk-1.4.341.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.19",
  "unicode-ident",
 ]
@@ -4080,11 +4080,10 @@ dependencies = [
 [[package]]
 name = "rspirv"
 version = "0.13.0+sdk-1.4.341.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "091dca2e1d6fd3098417b5ec88e77e80d1ba5945750943419dc976858082c296"
+source = "git+https://github.com/jlogan03/rspirv?branch=jlogan%2Fexecution-mode-id-args#ac3a2d6d18953ac1e8aed15a216631d1649f8392"
 dependencies = [
  "rustc-hash 1.1.0",
- "spirv",
+ "spirv 0.4.0+sdk-1.4.341.0 (git+https://github.com/jlogan03/rspirv?branch=jlogan%2Fexecution-mode-id-args)",
 ]
 
 [[package]]
@@ -4182,7 +4181,7 @@ dependencies = [
  "semver",
  "serde",
  "serde_json",
- "spirv",
+ "spirv 0.4.0+sdk-1.4.341.0 (git+https://github.com/jlogan03/rspirv?branch=jlogan%2Fexecution-mode-id-args)",
  "thiserror 2.0.19",
 ]
 
@@ -4620,6 +4619,14 @@ name = "spirv"
 version = "0.4.0+sdk-1.4.341.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d9571ea910ebd84c86af4b3ed27f9dbdc6ad06f17c5f96146b2b671e2976744f"
+dependencies = [
+ "bitflags 2.13.1",
+]
+
+[[package]]
+name = "spirv"
+version = "0.4.0+sdk-1.4.341.0"
+source = "git+https://github.com/jlogan03/rspirv?branch=jlogan%2Fexecution-mode-id-args#ac3a2d6d18953ac1e8aed15a216631d1649f8392"
 dependencies = [
  "bitflags 2.13.1",
  "serde",
