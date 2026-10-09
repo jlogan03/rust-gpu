@@ -13,7 +13,6 @@ Toolchain: `nightly-2026-08-15` (rustc 1.99.0)
 
 - Honor the permissions of `algebraic_*` and unsafe `*_fast` intrinsics under `rust_math` and `fast_math`.
   Vectorization preserves only permissions that every lane allows.
-  `compat_math` retains its existing behavior.
 
 - Add opt-in Vulkan floating-point policies: `rust_math` and `fast_math`.
   Use `compat_math` to preserve existing behavior.
