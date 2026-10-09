@@ -15,7 +15,7 @@
                OpExecutionModeId %2 FPFastMathDefault %f32 %u32_0
                OpExecutionMode %2 DenormPreserve 32
                OpExecutionMode %2 RoundingModeRTE 32
-               OpExecutionModeId %6 FPFastMathDefault %f32 %u32_196620
+               OpExecutionModeId %6 FPFastMathDefault %f32 %u32_458764
                OpExecutionMode %6 DenormFlushToZero 32
                OpExecutionMode %6 RoundingModeRTE 32
                OpName %a "a"
@@ -40,17 +40,17 @@
                OpDecorate %mixed_reverse Location 3
                OpDecorate %scaled Location 4
                OpDecorate %ordinary Location 5
-               OpDecorate %22 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc
-               OpDecorate %23 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc
-               OpDecorate %24 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc
-               OpDecorate %25 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc
-               OpDecorate %26 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc
+               OpDecorate %22 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
+               OpDecorate %23 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
+               OpDecorate %24 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
+               OpDecorate %25 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
+               OpDecorate %26 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
                OpDecorate %27 FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
-               OpDecorate %28 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc
-               OpDecorate %29 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc
+               OpDecorate %28 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
+               OpDecorate %29 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
                OpDecorate %30 FPFastMathMode None
                OpDecorate %31 FPFastMathMode None
-               OpDecorate %32 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc
+               OpDecorate %32 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
         %f32 = OpTypeFloat 32
 %_ptr_Input_f32 = OpTypePointer Input %f32
 %_ptr_Output_f32 = OpTypePointer Output %f32
@@ -64,7 +64,7 @@
       %v4f32 = OpTypeVector %f32 4
 %_ptr_Input_v4f32 = OpTypePointer Input %v4f32
 %_ptr_Output_v4f32 = OpTypePointer Output %v4f32
- %u32_196620 = OpConstant %u32 196620
+ %u32_458764 = OpConstant %u32 458764
           %a = OpVariable %_ptr_Input_v4f32 Input
           %b = OpVariable %_ptr_Input_v4f32 Input
    %matching = OpVariable %_ptr_Output_v4f32 Output

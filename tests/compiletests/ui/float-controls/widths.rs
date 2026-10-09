@@ -9,7 +9,8 @@
 
 use spirv_std::spirv;
 
-// The snapshot's fast-math mask 196620 is NSZ | AllowRecip | AllowContract | AllowReassoc.
+// The snapshot's fast-math mask 458764 is NSZ | AllowRecip | AllowContract |
+// AllowReassoc | AllowTransform.
 // A zero mask disables these permissions.
 // Reuse the explicit `f16` settings. Add the policy's settings for `f64`.
 #[spirv(compute(threads(1), rust_math, denorm_preserve = 16, rounding_mode_rte = 16))]

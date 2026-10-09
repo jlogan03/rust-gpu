@@ -24,7 +24,8 @@ pub fn scalar(a: f32, b: f32, output: &mut f32) {
     *output = x.mul_add(b, a) * b + a;
 }
 
-// The snapshot's fast-math mask 196620 is NSZ | AllowRecip | AllowContract | AllowReassoc.
+// The snapshot's fast-math mask 458764 is NSZ | AllowRecip | AllowContract |
+// AllowReassoc | AllowTransform.
 // A mix of decorated and undecorated lanes must override this default with a zero mask.
 #[spirv(fragment(fast_math))]
 pub fn vectors(

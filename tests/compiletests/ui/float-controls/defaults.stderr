@@ -14,10 +14,10 @@
                OpExecutionMode %1 LocalSize 1 1 1
                OpExecutionMode %3 LocalSize 1 1 1
                OpExecutionMode %4 LocalSize 1 1 1
-               OpExecutionModeId %1 FPFastMathDefault %f32 %u32_196620
+               OpExecutionModeId %1 FPFastMathDefault %f32 %u32_458764
                OpExecutionMode %1 DenormFlushToZero 32
                OpExecutionMode %1 RoundingModeRTE 32
-               OpExecutionModeId %1 FPFastMathDefault %f64 %u32_196620
+               OpExecutionModeId %1 FPFastMathDefault %f64 %u32_458764
                OpExecutionMode %1 DenormFlushToZero 64
                OpExecutionMode %1 RoundingModeRTE 64
                OpExecutionModeId %4 FPFastMathDefault %f32 %u32_0
@@ -33,14 +33,14 @@
                OpMemberDecorate %_struct_13 0 Offset 0
                OpDecorate %data Binding 0
                OpDecorate %data DescriptorSet 0
-               OpDecorate %14 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc
+               OpDecorate %14 FPFastMathMode NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
         %f32 = OpTypeFloat 32
  %_struct_13 = OpTypeStruct %f32
 %_ptr_StorageBuffer__struct_13 = OpTypePointer StorageBuffer %_struct_13
        %void = OpTypeVoid
          %17 = OpTypeFunction %void
         %u32 = OpTypeInt 32 0
- %u32_196620 = OpConstant %u32 196620
+ %u32_458764 = OpConstant %u32 458764
        %data = OpVariable %_ptr_StorageBuffer__struct_13 StorageBuffer
       %u32_0 = OpConstant %u32 0
 %_ptr_StorageBuffer_f32 = OpTypePointer StorageBuffer %f32

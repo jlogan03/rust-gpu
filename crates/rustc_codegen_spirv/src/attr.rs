@@ -17,17 +17,17 @@ use rustc_span::{Ident, Span, Symbol};
 use smallvec::SmallVec;
 use std::rc::Rc;
 
-// Use rustc's `LLVMRustSetAlgebraicMath` flags. These flags exclude `NotNaN` and `NotInf`.
+// Allow algebraic transformations without assuming finite inputs or results.
 pub(crate) const ALGEBRAIC_MATH_FLAGS: u32 = rspirv::spirv::FPFastMathMode::ALLOW_REASSOC.bits()
     | rspirv::spirv::FPFastMathMode::ALLOW_CONTRACT.bits()
+    | rspirv::spirv::FPFastMathMode::ALLOW_TRANSFORM.bits()
     | rspirv::spirv::FPFastMathMode::ALLOW_RECIP.bits()
     | rspirv::spirv::FPFastMathMode::NSZ.bits();
 
 // Unsafe *_fast intrinsics require finite inputs and results.
 pub(crate) const UNSAFE_FAST_MATH_FLAGS: u32 = ALGEBRAIC_MATH_FLAGS
     | rspirv::spirv::FPFastMathMode::NOT_NAN.bits()
-    | rspirv::spirv::FPFastMathMode::NOT_INF.bits()
-    | rspirv::spirv::FPFastMathMode::ALLOW_TRANSFORM.bits();
+    | rspirv::spirv::FPFastMathMode::NOT_INF.bits();
 
 // FIXME(eddyb) replace with `ArrayVec<[Word; 3]>`.
 #[derive(Copy, Clone, Debug)]

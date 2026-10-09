@@ -53,8 +53,8 @@ This policy makes no assumptions that exclude signed zero, NaN, or infinity.
 Entry points without a math policy keep the existing behavior without float-control flags.
 `compat_math` selects the same behavior and adds no float-control feature requirements.
 
-Use `fast_math` in an entry-point attribute to allow the transformations that `rust_math` disables.
-`fast_math` also ignores signed-zero distinctions and flushes subnormals to zero.
+Use `fast_math` in an entry-point attribute to permit algebraic transformations, including reassociation, contraction, and reciprocal transformations.
+`fast_math` allows algebraic transformations, ignores signed-zero distinctions, and flushes subnormals to zero.
 
 ```rust
 #[spirv(compute(threads(64), rust_math))]
@@ -73,8 +73,7 @@ pub fn fast_fragment() {}
 The three annotations are mutually exclusive and take no arguments.
 Each policy applies to one entry point and its callees.
 
-Under `rust_math` and `fast_math`, `algebraic_*` operations permit reassociation,
-contraction, reciprocal transformations, and treating positive and negative zero as equivalent.
+Under `rust_math` and `fast_math`, `algebraic_*` operations use the same algebraic permissions as `fast_math`, including `AllowTransform`.
 These operations use the entry point's subnormal and rounding modes.
 `compat_math` retains the existing lowering of algebraic and unsafe `*_fast` intrinsics.
 The linker copies shared helpers when these policies require different intrinsic permissions.
