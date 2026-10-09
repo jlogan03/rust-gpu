@@ -1600,7 +1600,7 @@ impl<'a, 'tcx> BuilderMethods<'a, 'tcx> for Builder<'a, 'tcx> {
         }
     }
     simple_op! {fadd, float: f_add}
-    simple_op! {fadd_fast, float: f_add, math_flags: crate::attr::UNSAFE_FAST_MATH_FLAGS}
+    simple_op! {fadd_fast, float: f_add, math_flags: crate::attr::FAST_MATH_FLAGS}
     simple_op! {fadd_algebraic, float: f_add, math_flags: crate::attr::ALGEBRAIC_MATH_FLAGS}
     simple_op! {
         sub,
@@ -1610,7 +1610,7 @@ impl<'a, 'tcx> BuilderMethods<'a, 'tcx> for Builder<'a, 'tcx> {
         }
     }
     simple_op! {fsub, float: f_sub}
-    simple_op! {fsub_fast, float: f_sub, math_flags: crate::attr::UNSAFE_FAST_MATH_FLAGS}
+    simple_op! {fsub_fast, float: f_sub, math_flags: crate::attr::FAST_MATH_FLAGS}
     simple_op! {fsub_algebraic, float: f_sub, math_flags: crate::attr::ALGEBRAIC_MATH_FLAGS}
     simple_op! {
         mul,
@@ -1620,7 +1620,7 @@ impl<'a, 'tcx> BuilderMethods<'a, 'tcx> for Builder<'a, 'tcx> {
         }
     }
     simple_op! {fmul, float: f_mul}
-    simple_op! {fmul_fast, float: f_mul, math_flags: crate::attr::UNSAFE_FAST_MATH_FLAGS}
+    simple_op! {fmul_fast, float: f_mul, math_flags: crate::attr::FAST_MATH_FLAGS}
     simple_op! {fmul_algebraic, float: f_mul, math_flags: crate::attr::ALGEBRAIC_MATH_FLAGS}
     simple_op! {
         udiv,
@@ -1654,7 +1654,7 @@ impl<'a, 'tcx> BuilderMethods<'a, 'tcx> for Builder<'a, 'tcx> {
         }
     }
     simple_op! {fdiv, float: f_div}
-    simple_op! {fdiv_fast, float: f_div, math_flags: crate::attr::UNSAFE_FAST_MATH_FLAGS}
+    simple_op! {fdiv_fast, float: f_div, math_flags: crate::attr::FAST_MATH_FLAGS}
     simple_op! {fdiv_algebraic, float: f_div, math_flags: crate::attr::ALGEBRAIC_MATH_FLAGS}
     simple_op! {
         urem,
@@ -1671,7 +1671,7 @@ impl<'a, 'tcx> BuilderMethods<'a, 'tcx> for Builder<'a, 'tcx> {
         }
     }
     simple_op! {frem, float: f_rem}
-    simple_op! {frem_fast, float: f_rem, math_flags: crate::attr::UNSAFE_FAST_MATH_FLAGS}
+    simple_op! {frem_fast, float: f_rem, math_flags: crate::attr::FAST_MATH_FLAGS}
     simple_op! {frem_algebraic, float: f_rem, math_flags: crate::attr::ALGEBRAIC_MATH_FLAGS}
     simple_shift_op! {
         shl,

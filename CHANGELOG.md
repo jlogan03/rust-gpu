@@ -15,6 +15,7 @@ Toolchain: `nightly-2026-08-15` (rustc 1.99.0)
   Vectorization preserves only permissions that every lane allows.
 
 - Add opt-in Vulkan floating-point policies: `rust_math` and `fast_math`.
+  `fast_math` assumes finite operands and results.
   Use `compat_math` to preserve existing behavior.
   See [floating-point policy attributes](docs/src/attributes.md#floating-point-policy-vulkan).
 

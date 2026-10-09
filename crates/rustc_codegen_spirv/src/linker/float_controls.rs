@@ -231,7 +231,7 @@ pub(super) fn expand_policies(module: &mut Module) {
             .iter()
             .find(|inst| inst.result_id == Some(flags))
             .unwrap();
-        // Codegen emits zero for `rust_math` and `ALGEBRAIC_MATH_FLAGS` for `fast_math`.
+        // Codegen emits zero for `rust_math` and `FAST_MATH_FLAGS` for `fast_math`.
         let fast = constant.class.opcode != Op::ConstantNull
             && constant.operands[0].unwrap_literal_bit32() != 0;
         // Collect one scalar type for each reachable float width.

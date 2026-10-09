@@ -55,6 +55,7 @@ Entry points without a math policy keep the existing behavior without float-cont
 
 Use `fast_math` in an entry-point attribute to permit algebraic transformations, including reassociation, contraction, and reciprocal transformations.
 `fast_math` allows algebraic transformations, ignores signed-zero distinctions, and flushes subnormals to zero.
+It assumes that floating-point operands and results are neither NaN nor infinity.
 
 ```rust
 #[spirv(compute(threads(64), rust_math))]
@@ -73,12 +74,13 @@ pub fn fast_fragment() {}
 The three annotations are mutually exclusive and take no arguments.
 Each policy applies to one entry point and its callees.
 
-Under `rust_math` and `fast_math`, `algebraic_*` operations use the same algebraic permissions as `fast_math`, including `AllowTransform`.
+Under `rust_math` and `fast_math`, `algebraic_*` operations permit algebraic transformations, including `AllowTransform`.
+They override the entry-point fast-math flags and do not assume finite operands or results.
 These operations use the entry point's subnormal and rounding modes.
+Unsafe `*_fast` intrinsics require finite operands and results.
 `compat_math` retains the existing lowering of algebraic and unsafe `*_fast` intrinsics.
 The linker copies shared helpers when these policies require different intrinsic permissions.
 
-Neither `rust_math` nor `fast_math` assumes that inputs exclude NaN or infinity.
 Explicit `mul_add` calls perform fused operations under both policies.
 
 Both `rust_math` and `fast_math` use `SPV_KHR_float_controls2`.
