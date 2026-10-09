@@ -11,8 +11,8 @@
 
 use spirv_std::spirv;
 
-// The snapshot's fast-math mask 458764 is NSZ | AllowRecip | AllowContract |
-// AllowReassoc | AllowTransform.
+// The snapshot's fast-math mask 458767 is NotNaN | NotInf | NSZ | AllowRecip |
+// AllowContract | AllowReassoc | AllowTransform.
 // A zero mask disables these permissions.
 // Each entry point must retain its policy when it calls the same function.
 // The linker must copy this helper to preserve `compat_math` behavior.

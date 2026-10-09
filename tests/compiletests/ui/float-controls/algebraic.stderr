@@ -15,7 +15,7 @@
                OpExecutionModeId %2 FPFastMathDefault %f32 %u32_0
                OpExecutionMode %2 DenormPreserve 32
                OpExecutionMode %2 RoundingModeRTE 32
-               OpExecutionModeId %6 FPFastMathDefault %f32 %u32_458764
+               OpExecutionModeId %6 FPFastMathDefault %f32 %u32_458767
                OpExecutionMode %6 DenormFlushToZero 32
                OpExecutionMode %6 RoundingModeRTE 32
                OpName %a "a"
@@ -64,7 +64,7 @@
       %v4f32 = OpTypeVector %f32 4
 %_ptr_Input_v4f32 = OpTypePointer Input %v4f32
 %_ptr_Output_v4f32 = OpTypePointer Output %v4f32
- %u32_458764 = OpConstant %u32 458764
+ %u32_458767 = OpConstant %u32 458767
           %a = OpVariable %_ptr_Input_v4f32 Input
           %b = OpVariable %_ptr_Input_v4f32 Input
    %matching = OpVariable %_ptr_Output_v4f32 Output

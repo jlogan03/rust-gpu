@@ -8,8 +8,8 @@
 use spirv_std::spirv;
 
 // Floating-point policies also apply to fragment entry points.
-// The snapshot's fast-math mask 458764 is NSZ | AllowRecip | AllowContract |
-// AllowReassoc | AllowTransform.
+// The snapshot's fast-math mask 458767 is NotNaN | NotInf | NSZ | AllowRecip |
+// AllowContract | AllowReassoc | AllowTransform.
 #[spirv(fragment(fast_math))]
 pub fn fast(#[spirv(location = 0)] output: &mut f32) {
     *output = 0.0;

@@ -179,10 +179,10 @@ impl<'tcx> CodegenCx<'tcx> {
             // Set the initial policy for `f32`. After resolving imports, the linker
             // applies the policy to every float width reachable from this entry point.
             let float = SpirvType::Float(32).def(span, self);
-            // `fast_math` permits safe algebraic transformations without assuming finite inputs.
+            // `fast_math` permits algebraic transformations and assumes finite inputs and results.
             // An explicit zero mask disables these permissions.
             let flags = if fast {
-                crate::attr::ALGEBRAIC_MATH_FLAGS
+                crate::attr::FAST_MATH_FLAGS
             } else {
                 0
             };

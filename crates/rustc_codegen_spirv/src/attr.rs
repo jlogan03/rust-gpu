@@ -24,8 +24,8 @@ pub(crate) const ALGEBRAIC_MATH_FLAGS: u32 = rspirv::spirv::FPFastMathMode::ALLO
     | rspirv::spirv::FPFastMathMode::ALLOW_RECIP.bits()
     | rspirv::spirv::FPFastMathMode::NSZ.bits();
 
-// Unsafe *_fast intrinsics require finite inputs and results.
-pub(crate) const UNSAFE_FAST_MATH_FLAGS: u32 = ALGEBRAIC_MATH_FLAGS
+// `fast_math` and unsafe *_fast intrinsics assume finite inputs and results.
+pub(crate) const FAST_MATH_FLAGS: u32 = ALGEBRAIC_MATH_FLAGS
     | rspirv::spirv::FPFastMathMode::NOT_NAN.bits()
     | rspirv::spirv::FPFastMathMode::NOT_INF.bits();
 
